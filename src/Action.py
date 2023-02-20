@@ -1,20 +1,15 @@
+import uuid
 from pydantic import BaseModel
 
+from model import ActionDescription
 from src.Utils import http_error
 
 
 class Action(BaseModel):
 
-    name: str
-    parameters: dict[str, str]
-    result: str
-
-    def __init__(self, name: str = '', parameters: dict = None, result: str = ''):
-        super(Action, self).__init__(
-            name = name,
-            parameters = parameters or {},
-            result = result
-        )
+    name: str = str(uuid.uuid4())
+    parameters: dict[str, str] = {}
+    result: str = ''
 
     def invoke(self, parameters: dict) -> str:
         """
@@ -50,3 +45,10 @@ class Action(BaseModel):
         }
         if api_type in types: return types[api_type]
         return type(None)
+
+    def make_description(self):
+        return ActionDescription(
+            name=self.name,
+            parameters=self.parameters,
+            result=self.result
+        )
