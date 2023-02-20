@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 import uuid
 
-from model import AgentDescription
-from src import Action, Message
+from model import AgentDescription, Message
+from src import Action
 from src.Utils import http_error
 
 

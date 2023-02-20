@@ -11,6 +11,3 @@ class ContainerImage(BaseModel):
     name: Optional[str]
     description: Optional[str]
     provider: Optional[str]
-
-    def __init__(self, **kwargs):
-        super(ContainerImage, self).__init__(**kwargs)

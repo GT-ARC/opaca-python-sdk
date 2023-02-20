@@ -9,12 +9,13 @@ app = FastAPI(debug=True, title='Container Agent')
 
 
 # main (singular) container instance
-# image_params = {'image_name': 'abc', 'requires': [], 'provides': []}
+image_params = {'imageName': 'container-agent-py', 'requires': [], 'provides': []}
 container = Container()
+container.set_image(**image_params)
 
 
-@app.get('/', response_model=ContainerDescription)
-def get_root() -> ContainerDescription:
+@app.get('/info', response_model=ContainerDescription)
+def get_container_info() -> ContainerDescription:
     return container.make_description()
 
 
@@ -48,6 +49,13 @@ def invoke_action(action: str, parameters: dict[str, str]) -> str:
     Invokes the specified action on an agent that knows the action.
     """
     return container.invoke_action(action, parameters)
+
+@app.post('/invoke/{action}/{agentId}', response_model=str)
+def invoke_agent_action(action: str, agentId: str, parameters: dict[str, str]) -> str:
+    """
+    Invokes an action on a specific agent.
+    """
+    return container.invoke_action(action, parameters, agentId)
 
 
 def main():
