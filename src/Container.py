@@ -55,3 +55,17 @@ class Container(BaseModel):
             return agent.receive_message(message)
         raise http_error(400, f'Unknown agentId: {agentId}.')
 
+
+    def get_running_since(self):
+        return [
+            self.running_since.year,
+            self.running_since.month,
+            self.running_since.day,
+            self.running_since.hour,
+            self.running_since.minute,
+            self.running_since.second,
+            self.running_since.microsecond
+        ]
+
+    def broadcast(self, channel: str, message: Message):
+        pass

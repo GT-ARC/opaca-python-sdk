@@ -43,3 +43,6 @@ class Agent(BaseModel):
         todo: do something with message
         """
         return f"Successfully received message: {message}."
+
+    def listen_on_channel(self, channel: str):
+        pass
