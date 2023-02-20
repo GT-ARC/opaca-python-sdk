@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from model import *
 from src import *
 
 
@@ -12,20 +13,25 @@ app = FastAPI(debug=True, title='Container Agent')
 container = Container()
 
 
-@app.get('/agents', response_model=list[Agent])
-def get_all_agents() -> list[Agent]:
+@app.get('/', response_model=ContainerDescription)
+def get_root() -> ContainerDescription:
+    return container.make_description()
+
+
+@app.get('/agents', response_model=list[AgentDescription])
+def get_all_agents() -> list[AgentDescription]:
     """
     Returns a list of all agents and their corresponding actions.
     """
-    return container.agents
+    return container.get_agent_descriptions()
 
 
-@app.get('/agents/{agentId}', response_model=Agent)
-def get_agent(agentId: str) -> Agent:
+@app.get('/agents/{agentId}', response_model=AgentDescription)
+def get_agent(agentId: str) -> AgentDescription:
     """
     Returns the agent with the passed agentId.
     """
-    return container.get_agent(agentId)
+    return container.get_agent(agentId).make_description()
 
 
 @app.post('/send/{agentId}', response_model=str)
@@ -37,7 +43,7 @@ def send_message(agentId: str, message: Message) -> str:
 
 
 @app.post('/invoke/{action}', response_model=str)
-def invoke_action(action: str, parameters: dict) -> str:
+def invoke_action(action: str, parameters: dict[str, str]) -> str:
     """
     Invokes the specified action on an agent that knows the action.
     """
@@ -45,11 +51,13 @@ def invoke_action(action: str, parameters: dict) -> str:
 
 
 def main():
-    agent1 = Agent(agentId='sampleAgent1', agentType='type1')
-    agent1.add_action(Action(name='sampleAction1', parameters={'param1': 'String', 'param2': 'Int'}))
-    agent1.add_action(Action(name='sampleAction2', parameters={'param1': 'Map'}))
-    agent2 = Agent(agentId='sampleAgent2', agentType='type2')
-    agent2.add_action(Action(name='sampleAction2', parameters={'param1': 'Map'}))
+    action1 = Action(name='sampleAction1', parameters={'param1': 'String', 'param2': 'Int'}, result='Int')
+    action2 = Action(name='sampleAction2', parameters={'param1': 'Map'}, result='String')
+    agent1 = Agent(agent_id='sampleAgent1', agent_type='type1')
+    agent1.add_action(action1)
+    agent1.add_action(action2)
+    agent2 = Agent(agent_id='sampleAgent2', agent_type='type2')
+    agent2.add_action(action2)
 
     container.add_agent(agent1)
     container.add_agent(agent2)
