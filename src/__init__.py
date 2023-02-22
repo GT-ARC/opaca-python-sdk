@@ -1,4 +1,4 @@
-from .Action import Action
-from .Agent import Agent
-from .ContainerImage import ContainerImage
+from .AbstractAgent import AbstractAgent
 from .Container import Container
+
+from .SampleAgent import SampleAgent
