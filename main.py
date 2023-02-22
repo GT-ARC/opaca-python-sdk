@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from model import *
 from src import *
 
+import os
 
 # main fastapi app object
 app = FastAPI(debug=True, title='Container Agent')
@@ -10,7 +11,7 @@ app = FastAPI(debug=True, title='Container Agent')
 
 # main (singular) container instance
 image_params = {'imageName': 'container-agent-py', 'requires': [], 'provides': []}
-container = Container()
+container = Container(container_id=os.environ.get("CONTAINER_ID"))
 container.set_image(**image_params)
 
 
