@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Any
+from typing import Any, Dict, List
 import uuid
 
 from Models import AgentDescription, ActionDescription, Message
@@ -11,18 +11,15 @@ class AbstractAgent(BaseModel):
     container: Any = None
     agent_id: str = str(uuid.uuid4())
     agent_type: str = ''
-    actions: dict[str, dict] = {}
-    messages: list[Message] = []
+    actions: Dict[str, dict] = {}
+    messages: List[Message] = []
 
     def get_action(self, name: str):
-        """
-        todo: refactor action into dict?
-        """
         if name in self.actions:
             return self.actions[name]
         return None
 
-    def add_action(self, name: str, action, parameters: dict[str, str], result: str):
+    def add_action(self, name: str, action, parameters: Dict[str, str], result: str):
         self.actions[name] = {
             'name': name,
             'action': action,
@@ -30,7 +27,7 @@ class AbstractAgent(BaseModel):
             'result': result
         }
 
-    def invoke_action(self, name: str, parameters: dict):
+    def invoke_action(self, name: str, parameters: Dict):
         action = self.get_action(name)
         if action is None:
             raise http_error(400, f'Unknown action: {name}.')
@@ -62,7 +59,7 @@ class AbstractAgent(BaseModel):
             actions=[self.make_action_description(action) for action in self.actions.values()]
         )
 
-    def make_action_description(self, action: dict):
+    def make_action_description(self, action: Dict):
         return ActionDescription(
             name=action['name'],
             parameters=action['parameters'],

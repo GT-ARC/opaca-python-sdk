@@ -1,8 +1,9 @@
 import os
 from fastapi import FastAPI
+from typing import List, Dict
 
 from src import Container, SampleAgent
-from Models import *
+from Models import Message, AgentDescription, ContainerDescription
 
 
 
@@ -27,8 +28,8 @@ def get_container_info() -> ContainerDescription:
     return container.make_description()
 
 
-@app.get('/agents', response_model=list[AgentDescription])
-def get_all_agents() -> list[AgentDescription]:
+@app.get('/agents', response_model=List[AgentDescription])
+def get_all_agents() -> List[AgentDescription]:
     """
     Returns a list of all agents and their corresponding actions.
     """
@@ -52,14 +53,15 @@ def send_message(agentId: str, message: Message) -> str:
 
 
 @app.post('/invoke/{action}', response_model=str)
-def invoke_action(action: str, parameters: dict[str, str]) -> str:
+def invoke_action(action: str, parameters: Dict[str, str]) -> str:
     """
     Invokes the specified action on an agent that knows the action.
     """
     return container.invoke_action(action, parameters)
 
+
 @app.post('/invoke/{action}/{agentId}', response_model=str)
-def invoke_agent_action(action: str, agentId: str, parameters: dict[str, str]) -> str:
+def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]) -> str:
     """
     Invokes an action on a specific agent.
     """

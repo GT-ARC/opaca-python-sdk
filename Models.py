@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Dict, List
 
 
 class Message(BaseModel):
@@ -10,7 +11,7 @@ class Message(BaseModel):
 class ActionDescription(BaseModel):
 
     name: str
-    parameters: dict[str, str]
+    parameters: Dict[str, str]
     result: str
 
 
@@ -18,14 +19,14 @@ class AgentDescription(BaseModel):
 
     agentId: str
     agentType: str
-    actions: list[ActionDescription]
+    actions: List[ActionDescription]
 
 
 class ImageDescription(BaseModel):
 
     imageName: str
-    requires: list[str]
-    provides: list[str]
+    requires: List[str]
+    provides: List[str]
     name: str = ''
     description: str = ''
     provider: str = ''
@@ -35,5 +36,5 @@ class ContainerDescription(BaseModel):
 
     containerId: str
     image: ImageDescription
-    agents: list[AgentDescription]
-    runningSince: list[int]
+    agents: List[AgentDescription]
+    runningSince: List[int]

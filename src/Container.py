@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Dict, List
 
 from src import AbstractAgent
 from Models import ContainerDescription, AgentDescription, Message, ImageDescription
@@ -10,9 +11,9 @@ class Container(BaseModel):
 
     container_id: str
     image: ImageDescription = None
-    agents: dict[str, AbstractAgent] = {}
+    agents: Dict[str, AbstractAgent] = {}
     running_since: datetime = datetime.now()
-    actions: dict[str, list[AbstractAgent]] = {}
+    actions: Dict[str, List[AbstractAgent]] = {}
 
     def get_agent(self, agent_id: str) -> AbstractAgent:
         """
@@ -46,7 +47,7 @@ class Container(BaseModel):
             for action in agent.actions.values():
                 self.actions[action['name']].remove(agent)
 
-    def invoke_action(self, name: str, parameters: dict) -> str:
+    def invoke_action(self, name: str, parameters: Dict[str, str]) -> str:
         """
         :param name: name of the action
         :param parameters: dict with values for the action's parameters
@@ -58,7 +59,7 @@ class Container(BaseModel):
                 return agent.invoke_action(name, parameters)
         raise http_error(400, f'Unknown action: {name}.')
 
-    def invoke_action_on_agent(self, name: str, agent_id: str, parameters: dict[str, str]):
+    def invoke_action_on_agent(self, name: str, agent_id: str, parameters: Dict[str, str]):
         """
         :param name:
         :param agent_id:
@@ -84,7 +85,7 @@ class Container(BaseModel):
             runningSince=self.get_running_since()
         )
 
-    def get_agent_descriptions(self) -> list[AgentDescription]:
+    def get_agent_descriptions(self) -> List[AgentDescription]:
         return [agent.make_description() for agent in self.agents.values()]
 
     def get_running_since(self):
