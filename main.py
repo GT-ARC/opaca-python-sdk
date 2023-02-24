@@ -24,7 +24,7 @@ container.set_image(**image_params)
 
 
 @app.get('/info', response_model=ContainerDescription)
-async def get_container_info() -> ContainerDescription:
+def get_container_info() -> ContainerDescription:
     """
     Get a description of the container.
     """
@@ -32,7 +32,7 @@ async def get_container_info() -> ContainerDescription:
 
 
 @app.get('/agents', response_model=List[AgentDescription])
-async def get_all_agents() -> List[AgentDescription]:
+def get_all_agents() -> List[AgentDescription]:
     """
     Get a list of all agents and their corresponding actions.
     """
@@ -40,7 +40,7 @@ async def get_all_agents() -> List[AgentDescription]:
 
 
 @app.get('/agents/{agentId}', response_model=AgentDescription)
-async def get_agent(agentId: str) -> AgentDescription:
+def get_agent(agentId: str) -> AgentDescription:
     """
     Returns the agent with the passed agentId.
     """
@@ -48,7 +48,7 @@ async def get_agent(agentId: str) -> AgentDescription:
 
 
 @app.post('/send/{agentId}')
-async def send_message(agentId: str, message: Message) -> str:
+def send_message(agentId: str, message: Message) -> str:
     """
     Send a message to the specified agent.
     """
@@ -56,7 +56,7 @@ async def send_message(agentId: str, message: Message) -> str:
 
 
 @app.post('/invoke/{action}', response_model=str)
-async def invoke_action(action: str, parameters: Dict[str, str]) -> str:
+def invoke_action(action: str, parameters: Dict[str, str]) -> str:
     """
     Invoke the specified action on any agent that knows the action.
     """
@@ -64,14 +64,14 @@ async def invoke_action(action: str, parameters: Dict[str, str]) -> str:
 
 
 @app.post('/invoke/{action}/{agentId}', response_model=str)
-async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]) -> str:
+def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]) -> str:
     """
     Invoke an action on a specific agent.
     """
     return container.invoke_agent_action(action, agentId, parameters)
 
 @app.post('/broadcast/{channel}')
-async def broadcast(channel: str, message: Message):
+def broadcast(channel: str, message: Message):
     """
     Broadcast a message to all agents that listen on the channel.
     """
