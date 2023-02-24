@@ -24,54 +24,64 @@ container.set_image(**image_params)
 
 
 @app.get('/info', response_model=ContainerDescription)
-def get_container_info() -> ContainerDescription:
+async def get_container_info() -> ContainerDescription:
+    """
+    Get a description of the container.
+    """
     return container.make_description()
 
 
 @app.get('/agents', response_model=List[AgentDescription])
-def get_all_agents() -> List[AgentDescription]:
+async def get_all_agents() -> List[AgentDescription]:
     """
-    Returns a list of all agents and their corresponding actions.
+    Get a list of all agents and their corresponding actions.
     """
     return container.get_agent_descriptions()
 
 
 @app.get('/agents/{agentId}', response_model=AgentDescription)
-def get_agent(agentId: str) -> AgentDescription:
+async def get_agent(agentId: str) -> AgentDescription:
     """
     Returns the agent with the passed agentId.
     """
     return container.get_agent(agentId).make_description()
 
 
-@app.post('/send/{agentId}', response_model=str)
-def send_message(agentId: str, message: Message) -> str:
+@app.post('/send/{agentId}')
+async def send_message(agentId: str, message: Message) -> str:
     """
-    Sends a message to the specified agent.
+    Send a message to the specified agent.
     """
-    return container.send_message(agentId, message)
+    container.send_message(agentId, message)
 
 
 @app.post('/invoke/{action}', response_model=str)
-def invoke_action(action: str, parameters: Dict[str, str]) -> str:
+async def invoke_action(action: str, parameters: Dict[str, str]) -> str:
     """
-    Invokes the specified action on an agent that knows the action.
+    Invoke the specified action on any agent that knows the action.
     """
     return container.invoke_action(action, parameters)
 
 
 @app.post('/invoke/{action}/{agentId}', response_model=str)
-def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]) -> str:
+async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]) -> str:
     """
-    Invokes an action on a specific agent.
+    Invoke an action on a specific agent.
     """
-    return container.invoke_action_on_agent(action, agentId, parameters)
+    return container.invoke_agent_action(action, agentId, parameters)
+
+@app.post('/broadcast/{channel}')
+async def broadcast(channel: str, message: Message):
+    """
+    Broadcast a message to all agents that listen on the channel.
+    """
+    container.broadcast(channel, message)
 
 
 def main():
     agent1 = SampleAgent(agent_id='sampleAgent1', agent_type='type1')
-
     container.add_agent(agent1)
+    agent1.subscribe_channel('test_channel')
 
 
 main()

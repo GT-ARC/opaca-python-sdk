@@ -12,13 +12,13 @@ class Container(BaseModel):
     container_id: str
     image: ImageDescription = None
     agents: Dict[str, AbstractAgent] = {}
-    running_since: datetime = datetime.now()
+    started_at: datetime = datetime.now()
     actions: Dict[str, List[AbstractAgent]] = {}
+    channels: Dict[str, List[AbstractAgent]] = {}
 
     def get_agent(self, agent_id: str) -> AbstractAgent:
         """
-        :param agent_id:
-        :return:
+        Get the agent with the specified agent_id.
         """
         if agent_id in self.agents:
             return self.agents[agent_id]
@@ -26,7 +26,7 @@ class Container(BaseModel):
 
     def add_agent(self, agent: AbstractAgent):
         """
-        adds the agent to this container, and adds its actions to this container's
+        Add the agent to this container, and adds its actions to this container's
         actions dict for quick access
         """
         self.agents[agent.agent_id] = agent
@@ -38,9 +38,15 @@ class Container(BaseModel):
                 self.actions[action['name']].append(agent)
 
     def set_image(self, **image_params: dict):
+        """
+        Set this container's image to a new image with the specified parameters.
+        """
         self.image = ImageDescription(**image_params)
 
     def remove_agent(self, agent_id: str):
+        """
+        Remove the agent from the container.
+        """
         if agent_id in self.agents:
             agent = self.agents[agent_id]
             del self.agents[agent_id]
@@ -49,9 +55,7 @@ class Container(BaseModel):
 
     def invoke_action(self, name: str, parameters: Dict[str, str]) -> str:
         """
-        :param name: name of the action
-        :param parameters: dict with values for the action's parameters
-        :return: result of the action
+        Invoke action on any agent that knows the action.
         """
         for agent in self.agents.values():
             action = agent.get_action(name)
@@ -59,23 +63,50 @@ class Container(BaseModel):
                 return agent.invoke_action(name, parameters)
         raise http_error(400, f'Unknown action: {name}.')
 
-    def invoke_action_on_agent(self, name: str, agent_id: str, parameters: Dict[str, str]):
+    def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, str]):
         """
-        :param name:
-        :param agent_id:
-        :param parameters:
-        :return:
+        Invoke action on the specified agent.
         """
         agent = self.get_agent(agent_id)
         if agent is not None:
             return agent.invoke_action(name, parameters)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
-    def send_message(self, agent_id: str, message: Message) -> str:
+    def send_message(self, agent_id: str, message: Message):
+        """
+        Send a message to the specified agent.
+        """
         agent = self.get_agent(agent_id)
         if agent is not None:
-            return agent.receive_message(message)
-        raise http_error(400, f'Unknown agentId: {agent_id}.')
+            agent.receive_message(message)
+
+    def subscribe_channel(self, channel: str, agent: AbstractAgent):
+        """
+        Subscribe an agent to the specified channel.
+        """
+        if channel not in self.channels:
+            self.channels[channel] = []
+        if agent not in self.channels[channel]:
+            self.channels[channel].append(agent)
+
+    def unsubscribe_channel(self, channel: str, agent: AbstractAgent):
+        """
+        Unsubscribe an agent from the specified channel.
+        """
+        if channel not in self.channels:
+            return
+        if agent not in self.channels[channel]:
+            return
+        self.channels[channel].remove(agent)
+
+    def broadcast(self, channel: str, message: Message):
+        """
+        Broadcast a message to all agents subscribing to the specified channel.
+        """
+        if channel not in self.channels:
+            return
+        for agent in self.channels[channel]:
+            agent.receive_message(message)
 
     def make_description(self) -> ContainerDescription:
         return ContainerDescription(
@@ -90,14 +121,11 @@ class Container(BaseModel):
 
     def get_running_since(self):
         return [
-            self.running_since.year,
-            self.running_since.month,
-            self.running_since.day,
-            self.running_since.hour,
-            self.running_since.minute,
-            self.running_since.second,
-            self.running_since.microsecond
+            self.started_at.year,
+            self.started_at.month,
+            self.started_at.day,
+            self.started_at.hour,
+            self.started_at.minute,
+            self.started_at.second,
+            self.started_at.microsecond
         ]
-
-    def broadcast(self, channel: str, message: Message):
-        pass
