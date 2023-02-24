@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.10-slim
+FROM python:3.8-slim
 WORKDIR /app
 RUN pip install --upgrade pip
 COPY requirements.txt .

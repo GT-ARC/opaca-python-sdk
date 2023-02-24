@@ -4,6 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+pydantic = "*"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 docker = "*"
@@ -12,4 +13,4 @@ fastapi-utils = "*"
 [dev-packages]
 
 [requires]
-python_version = "3.10"
+python_version = "3.8"

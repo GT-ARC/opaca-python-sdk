@@ -1,9 +1,17 @@
-from fastapi import FastAPI
-
-from model import *
-from src import *
-
 import os
+from fastapi import FastAPI
+from typing import List, Dict
+
+from src import Container, SampleAgent
+from Models import Message, AgentDescription, ContainerDescription
+
+
+
+def get_container_id():
+    if 'CONTAINER_ID' in os.environ:
+        return os.environ.get('CONTAINER_ID')
+    return ''
+
 
 # main fastapi app object
 app = FastAPI(debug=True, title='Container Agent')
@@ -11,7 +19,7 @@ app = FastAPI(debug=True, title='Container Agent')
 
 # main (singular) container instance
 image_params = {'imageName': 'container-agent-py', 'requires': [], 'provides': []}
-container = Container(container_id=os.environ.get("CONTAINER_ID"))
+container = Container(container_id=get_container_id())
 container.set_image(**image_params)
 
 
@@ -20,8 +28,8 @@ def get_container_info() -> ContainerDescription:
     return container.make_description()
 
 
-@app.get('/agents', response_model=list[AgentDescription])
-def get_all_agents() -> list[AgentDescription]:
+@app.get('/agents', response_model=List[AgentDescription])
+def get_all_agents() -> List[AgentDescription]:
     """
     Returns a list of all agents and their corresponding actions.
     """
@@ -45,31 +53,25 @@ def send_message(agentId: str, message: Message) -> str:
 
 
 @app.post('/invoke/{action}', response_model=str)
-def invoke_action(action: str, parameters: dict[str, str]) -> str:
+def invoke_action(action: str, parameters: Dict[str, str]) -> str:
     """
     Invokes the specified action on an agent that knows the action.
     """
     return container.invoke_action(action, parameters)
 
+
 @app.post('/invoke/{action}/{agentId}', response_model=str)
-def invoke_agent_action(action: str, agentId: str, parameters: dict[str, str]) -> str:
+def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]) -> str:
     """
     Invokes an action on a specific agent.
     """
-    return container.invoke_action(action, parameters, agentId)
+    return container.invoke_action_on_agent(action, agentId, parameters)
 
 
 def main():
-    action1 = Action(name='sampleAction1', parameters={'param1': 'String', 'param2': 'Int'}, result='Int')
-    action2 = Action(name='sampleAction2', parameters={'param1': 'Map'}, result='String')
-    agent1 = Agent(agent_id='sampleAgent1', agent_type='type1')
-    agent1.add_action(action1)
-    agent1.add_action(action2)
-    agent2 = Agent(agent_id='sampleAgent2', agent_type='type2')
-    agent2.add_action(action2)
+    agent1 = SampleAgent(agent_id='sampleAgent1', agent_type='type1')
 
     container.add_agent(agent1)
-    container.add_agent(agent2)
 
 
 main()
