@@ -1,5 +1,5 @@
 **Setup**
 
-* $ docker build --tag container-agent-py .
-* $ docker run --network=host container-agent-py
+* $ docker build --tag sample-container-python .
+* $ docker run --network=host sample-container-python
 * http://localhost:8088/docs#/

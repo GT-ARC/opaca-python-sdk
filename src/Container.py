@@ -10,6 +10,7 @@ from src.Utils import http_error
 class Container(BaseModel):
 
     container_id: str
+    platform_url: str
     image: ImageDescription = None
     agents: Dict[str, AbstractAgent] = {}
     started_at: datetime = datetime.now()
