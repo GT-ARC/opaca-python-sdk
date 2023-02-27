@@ -48,7 +48,7 @@ def get_agent(agentId: str) -> AgentDescription:
 
 
 @app.post('/send/{agentId}')
-def send_message(agentId: str, message: Message) -> str:
+def send_message(agentId: str, message: Message):
     """
     Send a message to the specified agent.
     """
