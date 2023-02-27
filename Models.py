@@ -1,10 +1,10 @@
 from pydantic import BaseModel
-from typing import Dict, List
+from typing import Dict, List, Union
 
 
 class Message(BaseModel):
 
-    payload: dict
+    payload: Union[Dict, List, str, int, float]
     replyTo: str
 
 
