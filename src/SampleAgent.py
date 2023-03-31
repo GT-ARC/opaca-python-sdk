@@ -23,6 +23,12 @@ class SampleAgent(AbstractAgent):
             parameters={'x': 'Int', 'y': 'Int'},
             result='Int'
         )
+        self.add_action(
+            name='timeConsumingAction',
+            action=self.time_consuming_action,
+            parameters={'text': 'String', 'time_offset': 'Int'},
+            result='String'
+        )
 
     def sample_action_1(self, param1: str, param2: int) -> str:
         return f'{self.agent_id} executed sampleAction1 with params: {param1}, {param2}'
@@ -33,6 +39,13 @@ class SampleAgent(AbstractAgent):
             return int(x) + int(y)
         except ValueError:
             return 0
+
+    def time_consuming_action(self, text: str, time_offset: str = 0) -> str:
+        time_offset = int(time_offset)
+        print(f'{self.agent_id} executing time_consuming action, taking approx {60 + time_offset} seconds')
+        from time import sleep
+        sleep(60 + time_offset)
+        return f'{text}, {time_offset}'
 
     def receive_message(self, message: Message):
         super().receive_message(message)
