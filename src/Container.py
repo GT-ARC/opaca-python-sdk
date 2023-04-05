@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Union
+from typing import Dict, List, Optional
 
 from src import AbstractAgent
 from Models import ContainerDescription, AgentDescription, Message, ImageDescription
@@ -15,7 +15,7 @@ class Container:
         self.started_at: datetime = datetime.now()
         self.actions: Dict[str, List[AbstractAgent]] = {}
         self.channels: Dict[str, List[AbstractAgent]] = {}
-        self.image: Union[ImageDescription, None] = None
+        self.image: Optional[ImageDescription] = None
 
     def set_image(self, **image_params: dict):
         """
