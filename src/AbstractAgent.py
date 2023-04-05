@@ -1,4 +1,3 @@
-from pydantic import BaseModel
 from typing import Dict, List
 import uuid
 
@@ -6,13 +5,14 @@ from Models import AgentDescription, ActionDescription, Message
 from src.Utils import http_error
 
 
-class AbstractAgent(BaseModel):
+class AbstractAgent:
 
-    container: 'Container' = None
-    agent_id: str = str(uuid.uuid4())
-    agent_type: str = ''
-    actions: Dict[str, dict] = {}
-    messages: List[Message] = []
+    def __init__(self, agent_id: str = '', agent_type: str = '', container: 'Container' = None):
+        self.agent_id: str = agent_id if agent_id else str(uuid.uuid4())
+        self.agent_type: str = agent_type
+        self.container: 'Container' = container
+        self.actions: Dict[str, Dict] = {}
+        self.messages: List[Message] = []
 
     def get_action(self, name: str):
         """

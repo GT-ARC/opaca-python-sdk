@@ -1,21 +1,21 @@
-from pydantic import BaseModel
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from src import AbstractAgent
 from Models import ContainerDescription, AgentDescription, Message, ImageDescription
 from src.Utils import http_error
 
 
-class Container(BaseModel):
+class Container:
 
-    container_id: str
-    platform_url: str
-    image: ImageDescription = None
-    agents: Dict[str, AbstractAgent] = {}
-    started_at: datetime = datetime.now()
-    actions: Dict[str, List[AbstractAgent]] = {}
-    channels: Dict[str, List[AbstractAgent]] = {}
+    def __init__(self, container_id: str, platform_url: str):
+        self.container_id: str = container_id
+        self.platform_url: str = platform_url
+        self.agents: Dict[str, AbstractAgent] = {}
+        self.started_at: datetime = datetime.now()
+        self.actions: Dict[str, List[AbstractAgent]] = {}
+        self.channels: Dict[str, List[AbstractAgent]] = {}
+        self.image: Optional[ImageDescription] = None
 
     def set_image(self, **image_params: dict):
         """
