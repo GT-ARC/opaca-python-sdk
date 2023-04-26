@@ -30,6 +30,8 @@ class ImageDescription(BaseModel):
     name: str = ''
     description: str = ''
     provider: str = ''
+    apiPort: int = 8082
+    extraPorts: dict = {}
 
 
 class ContainerDescription(BaseModel):
@@ -37,4 +39,5 @@ class ContainerDescription(BaseModel):
     containerId: str
     image: ImageDescription
     agents: List[AgentDescription]
-    runningSince: List[int]
+    runningSince: str
+    connectivity: None

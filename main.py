@@ -83,5 +83,8 @@ def main():
     container.add_agent(agent1)
     agent1.subscribe_channel('test_channel')
 
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=container.image.apiPort)
+
 
 main()
