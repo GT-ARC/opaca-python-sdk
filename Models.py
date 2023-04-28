@@ -25,8 +25,8 @@ class AgentDescription(BaseModel):
 class ImageDescription(BaseModel):
 
     imageName: str
-    requires: List[str]
-    provides: List[str]
+    requires: List[str] = []
+    provides: List[str] = []
     name: str = ''
     description: str = ''
     provider: str = ''

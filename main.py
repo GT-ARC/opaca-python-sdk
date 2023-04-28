@@ -17,7 +17,7 @@ app = FastAPI(debug=True, title='Container Agent')
 
 
 # main (singular) container instance
-image_params = {'imageName': 'sample-container-python', 'requires': [], 'provides': []}
+image_params = {'imageName': 'sample-container-python'}
 container = Container(container_id=get_environment_variable('CONTAINER_ID'),
                       platform_url=get_environment_variable('PLATFORM_URL'))
 container.set_image(**image_params)
