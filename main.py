@@ -1,6 +1,6 @@
 import os
 from fastapi import FastAPI
-from typing import List, Dict
+from typing import List, Dict, Union, Any
 
 from src import Container, SampleAgent
 from Models import Message, AgentDescription, ContainerDescription
@@ -17,7 +17,7 @@ app = FastAPI(debug=True, title='Container Agent')
 
 
 # main (singular) container instance
-image_params = {'imageName': 'sample-container-python', 'requires': [], 'provides': []}
+image_params = {'imageName': 'sample-container-python'}
 container = Container(container_id=get_environment_variable('CONTAINER_ID'),
                       platform_url=get_environment_variable('PLATFORM_URL'))
 container.set_image(**image_params)
@@ -55,16 +55,16 @@ def send_message(agentId: str, message: Message):
     container.send_message(agentId, message)
 
 
-@app.post('/invoke/{action}', response_model=str)
-def invoke_action(action: str, parameters: Dict[str, str]) -> str:
+@app.post('/invoke/{action}', response_model=Union[str, int, float, Dict, List])
+def invoke_action(action: str, parameters: Dict[str, Any]):
     """
     Invoke the specified action on any agent that knows the action.
     """
     return container.invoke_action(action, parameters)
 
 
-@app.post('/invoke/{action}/{agentId}', response_model=str)
-def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]) -> str:
+@app.post('/invoke/{action}/{agentId}', response_model=Union[str, int, float, Dict, List])
+def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]):
     """
     Invoke an action on a specific agent.
     """
@@ -82,6 +82,9 @@ def main():
     agent1 = SampleAgent(agent_id='sampleAgent1', agent_type='type1')
     container.add_agent(agent1)
     agent1.subscribe_channel('test_channel')
+
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=container.image.apiPort)
 
 
 main()

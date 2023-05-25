@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from src import AbstractAgent
@@ -12,7 +12,7 @@ class Container:
         self.container_id: str = container_id
         self.platform_url: str = platform_url
         self.agents: Dict[str, AbstractAgent] = {}
-        self.started_at: datetime = datetime.now()
+        self.started_at: datetime = datetime.utcnow()
         self.actions: Dict[str, List[AbstractAgent]] = {}
         self.channels: Dict[str, List[AbstractAgent]] = {}
         self.image: Optional[ImageDescription] = None
@@ -130,19 +130,12 @@ class Container:
             containerId=self.container_id,
             image=self.image,
             agents=self.get_agent_descriptions(),
-            runningSince=self.get_running_since()
+            runningSince=self.get_running_since(),
+            connectivity=None
         )
 
     def get_agent_descriptions(self) -> List[AgentDescription]:
         return [agent.make_description() for agent in self.agents.values()]
 
     def get_running_since(self):
-        return [
-            self.started_at.year,
-            self.started_at.month,
-            self.started_at.day,
-            self.started_at.hour,
-            self.started_at.minute,
-            self.started_at.second,
-            self.started_at.microsecond
-        ]
+        return self.started_at.isoformat(timespec="milliseconds") + "Z"
