@@ -138,5 +138,4 @@ class Container:
         return [agent.make_description() for agent in self.agents.values()]
 
     def get_running_since(self):
-        millis = self.started_at.microsecond // 1000
-        return f'{self.started_at.year:04}-{self.started_at.month:02}-{self.started_at.day:02}T{self.started_at.hour:02}:{self.started_at.minute:02}:{self.started_at.second:02}.{millis:03}Z'
+        return self.started_at.isoformat(timespec="milliseconds") + "Z"
