@@ -1,3 +1,4 @@
 {
-  "imageName": "sample-container-python"
+  "imageName": "sample-container-python",
+  "version": "0.0.1"
 }

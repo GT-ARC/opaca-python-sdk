@@ -29,6 +29,7 @@ class ImageDescription(BaseModel):
     provides: List[str] = []
     name: str = ''
     description: str = ''
+    version: str = ''
     provider: str = ''
     apiPort: int = 8082
     extraPorts: dict = {}
