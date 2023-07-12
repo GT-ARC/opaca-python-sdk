@@ -1,5 +1,5 @@
 **Setup**
 
-* $ docker build --tag sample-container-python .
-* $ docker run --network=host sample-container-python
-* http://localhost:8088/docs#/
+* $ docker build -t sample-container-python .
+* $ docker run -p 8082:8082 sample-container-python
+* Open http://localhost:8088/docs#/

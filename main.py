@@ -1,4 +1,4 @@
-import os
+import os, json
 from fastapi import FastAPI
 from typing import List, Dict, Union, Any
 
@@ -12,15 +12,26 @@ def get_environment_variable(name: str):
     return ''
 
 
+def load_image_params():
+    with open('resources/container.json', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def init_container():
+    container_id = get_environment_variable('CONTAINER_ID')
+    platform_url = get_environment_variable('PLATFORM_URL')
+    image_params = load_image_params()
+    ctr = Container(container_id, platform_url)
+    ctr.set_image(**image_params)
+    return ctr
+
+
 # main fastapi app object
 app = FastAPI(debug=True, title='Container Agent')
 
 
 # main (singular) container instance
-image_params = {'imageName': 'sample-container-python'}
-container = Container(container_id=get_environment_variable('CONTAINER_ID'),
-                      platform_url=get_environment_variable('PLATFORM_URL'))
-container.set_image(**image_params)
+container = init_container()
 
 
 @app.get('/info', response_model=ContainerDescription)
@@ -64,7 +75,7 @@ def invoke_action(action: str, parameters: Dict[str, Any]):
 
 
 @app.post('/invoke/{action}/{agentId}', response_model=Union[str, int, float, Dict, List])
-def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, str]):
+def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any]):
     """
     Invoke an action on a specific agent.
     """
