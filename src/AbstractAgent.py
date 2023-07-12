@@ -1,16 +1,17 @@
 from typing import Dict, List
 import uuid
 
+from src import Container
 from Models import AgentDescription, ActionDescription, Message
 from src.Utils import http_error
 
 
 class AbstractAgent:
 
-    def __init__(self, agent_id: str = '', agent_type: str = '', container: 'Container' = None):
+    def __init__(self, agent_id: str = '', agent_type: str = '', container: Container = None):
         self.agent_id: str = agent_id if agent_id else str(uuid.uuid4())
         self.agent_type: str = agent_type
-        self.container: 'Container' = container
+        self.container: Container = container
         self.actions: Dict[str, Dict] = {}
         self.messages: List[Message] = []
 
@@ -47,7 +48,7 @@ class AbstractAgent:
 
     def receive_message(self, message: Message):
         """
-        todo: do something with message
+        Override in subclasses to do something with the message.
         """
         self.messages.append(message)
 
