@@ -39,7 +39,7 @@ def get_container_info() -> ContainerDescription:
     """
     Get a description of the container.
     """
-    return container.make_description()
+    return container.get_description()
 
 
 @app.get('/agents', response_model=List[AgentDescription])

@@ -1,29 +1,46 @@
 from pydantic import BaseModel
-from typing import Dict, List, Union
+from typing import Dict, List, Any
+from enum import Enum
 
 
 class Message(BaseModel):
-
-    payload: Union[Dict, List, str, int, float]
-    replyTo: str
+    payload: Any
+    replyTo: str = ''
 
 
 class ActionDescription(BaseModel):
-
     name: str
     parameters: Dict[str, str]
     result: str
 
 
-class AgentDescription(BaseModel):
+class StreamDescription(BaseModel):
+    class Mode(Enum):
+        GET = 0
+        POST = 1
+    name: str
+    mode: Mode
 
+
+class ImageParameter(BaseModel):
+    name: str
+    type: str
+    required: bool = False
+    confidential: bool = False
+    defaultValue: str = None
+
+
+class AgentDescription(BaseModel):
     agentId: str
     agentType: str
-    actions: List[ActionDescription]
+    actions: List[ActionDescription] = []
+    streams: List[StreamDescription] = []
 
 
 class ImageDescription(BaseModel):
-
+    class PortDescription(BaseModel):
+        protocol: str
+        description: str = ''
     imageName: str
     requires: List[str] = []
     provides: List[str] = []
@@ -32,13 +49,13 @@ class ImageDescription(BaseModel):
     version: str = ''
     provider: str = ''
     apiPort: int = 8082
-    extraPorts: dict = {}
+    extraPorts: Dict[int, PortDescription] = {}
+    parameters: List[ImageParameter] = []
 
 
 class ContainerDescription(BaseModel):
-
     containerId: str
     image: ImageDescription
-    agents: List[AgentDescription]
+    agents: List[AgentDescription] = []
     runningSince: str
-    connectivity: None
+    connectivity: None = None

@@ -13,6 +13,7 @@ class AbstractAgent:
         self.agent_type: str = agent_type
         self.container: Container = container
         self.actions: Dict[str, Dict] = {}
+        self.streams: Dict[str, Dict] = {}
         self.messages: List[Message] = []
 
     def get_action(self, name: str):

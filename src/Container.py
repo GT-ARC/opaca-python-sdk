@@ -125,7 +125,7 @@ class Container:
         for agent in self.channels[channel]:
             agent.receive_message(message)
 
-    def make_description(self) -> ContainerDescription:
+    def get_description(self) -> ContainerDescription:
         return ContainerDescription(
             containerId=self.container_id,
             image=self.image,
