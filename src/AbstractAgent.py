@@ -24,13 +24,19 @@ class AbstractAgent:
             return self.actions[name]
         return None
 
-    def add_action(self, name: str, action, parameters: Dict[str, str], result: str):
+    def knows_action(self, name: str) -> bool:
+        """
+        Check if the agent knows the action with the given name.
+        """
+        return self.get_action(name) is not None
+
+    def add_action(self, name: str, callback, parameters: Dict[str, str], result: str):
         """
         Add an action to the publicly visible list of actions this agent can perform.
         """
         self.actions[name] = {
             'name': name,
-            'action': action,
+            'callback': callback,
             'parameters': parameters,
             'result': result
         }
@@ -43,7 +49,7 @@ class AbstractAgent:
         if action is None:
             raise http_error(400, f'Unknown action: {name}.')
         try:
-            return action['action'](**parameters)
+            return action['callback'](**parameters)
         except TypeError:
             raise http_error(400, f'Invalid action parameters. Provided: {parameters}, Needed: {action["parameters"]}')
 
@@ -73,10 +79,11 @@ class AbstractAgent:
         return AgentDescription(
             agentId=self.agent_id,
             agentType=self.agent_type,
-            actions=[self.make_action_description(action) for action in self.actions.values()]
+            actions=[self.make_action_description(action_name) for action_name in self.actions]
         )
 
-    def make_action_description(self, action: Dict):
+    def make_action_description(self, action_name: str):
+        action = self.actions[action_name]
         return ActionDescription(
             name=action['name'],
             parameters=action['parameters'],
