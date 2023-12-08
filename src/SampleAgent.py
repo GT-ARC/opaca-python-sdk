@@ -13,21 +13,21 @@ class SampleAgent(AbstractAgent):
         super(SampleAgent, self).__init__(**kwargs)
         self.add_action(
             name='sampleAction1',
-            callback=self.sample_action_1,
             parameters={'param1': 'String', 'param2': 'Int'},
-            result='String'
+            result='String',
+            callback=self.sample_action_1
         )
         self.add_action(
             name='add',
-            callback=self.add,
             parameters={'x': 'Int', 'y': 'Int'},
-            result='Int'
+            result='Int',
+            callback=self.add
         )
         self.add_action(
             name='timeConsumingAction',
-            callback=self.time_consuming_action,
             parameters={'text': 'String', 'time_offset': 'Int'},
-            result='String'
+            result='String',
+            callback=self.time_consuming_action
         )
 
     def sample_action_1(self, param1: str, param2: int) -> str:

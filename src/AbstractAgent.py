@@ -20,7 +20,7 @@ class AbstractAgent:
         """
         Get data about the action with the specified name.
         """
-        if name in self.actions:
+        if self.knows_action(name):
             return self.actions[name]
         return None
 
@@ -28,28 +28,27 @@ class AbstractAgent:
         """
         Check if the agent knows the action with the given name.
         """
-        return self.get_action(name) is not None
+        return name in self.actions
 
-    def add_action(self, name: str, callback, parameters: Dict[str, str], result: str):
+    def add_action(self, name: str, parameters: Dict[str, str], result: str, callback):
         """
         Add an action to the publicly visible list of actions this agent can perform.
         """
         self.actions[name] = {
             'name': name,
-            'callback': callback,
             'parameters': parameters,
-            'result': result
+            'result': result,
+            'callback': callback
         }
 
     def invoke_action(self, name: str, parameters: Dict):
         """
         Invoke action on this agent.
         """
-        action = self.get_action(name)
-        if action is None:
+        if not self.knows_action(name):
             raise http_error(400, f'Unknown action: {name}.')
         try:
-            return action['callback'](**parameters)
+            return self.get_action(name)['callback'](**parameters)
         except TypeError:
             raise http_error(400, f'Invalid action parameters. Provided: {parameters}, Needed: {action["parameters"]}')
 
@@ -63,17 +62,15 @@ class AbstractAgent:
         """
         Subscribe to a broadcasting channel.
         """
-        if self.container is None:
-            return
-        self.container.subscribe_channel(channel, self)
+        if self.container is not None:
+            self.container.subscribe_channel(channel, self)
 
     def unsubscribe_channel(self, channel: str):
         """
         Subscribe to a broadcasting channel.
         """
-        if self.container is None:
-            return
-        self.container.unsubscribe_channel(channel, self)
+        if self.container is not None:
+            self.container.unsubscribe_channel(channel, self)
 
     def make_description(self) -> AgentDescription:
         return AgentDescription(

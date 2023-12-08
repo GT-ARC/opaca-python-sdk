@@ -8,26 +8,19 @@ from src.Utils import http_error
 
 class Container:
 
-    def __init__(self, container_id: str, platform_url: str):
+    def __init__(self, container_id: str, platform_url: str, image: ImageDescription):
         self.container_id: str = container_id
         self.platform_url: str = platform_url
+        self.image: ImageDescription = image
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.utcnow()
-        self.actions: Dict[str, List[AbstractAgent]] = {}
         self.channels: Dict[str, List[AbstractAgent]] = {}
-        self.image: Optional[ImageDescription] = None
-
-    def set_image(self, **image_params: dict):
-        """
-        Set this container's image to a new image with the specified parameters.
-        """
-        self.image = ImageDescription(**image_params)
 
     def get_agent(self, agent_id: str) -> AbstractAgent:
         """
         Get the agent with the specified agent_id.
         """
-        if agent_id in self.agents:
+        if self.has_agent(agent_id):
             return self.agents[agent_id]
         raise http_error(400, f'Unknown agentId: {agent_id}.')
 
@@ -35,48 +28,26 @@ class Container:
         """
         Add the agent to this container.
         """
-        if agent.agent_id in self.agents:
-            return
-        self.agents[agent.agent_id] = agent
-        agent.container = self
-        self.add_agent_actions(agent)
+        if not self.has_agent(agent.agent_id):
+            self.agents[agent.agent_id] = agent
+            agent.container = self
 
     def remove_agent(self, agent_id: str):
         """
         Remove the agent from the container.
         """
-        if agent_id not in self.agents:
-            return
-        agent = self.agents[agent_id]
-        self.remove_agent_actions(agent)
-        del self.agents[agent_id]
+        if self.has_agent(agent_id):
+            del self.agents[agent_id]
 
-    def add_agent_actions(self, agent: AbstractAgent):
-        """
-        Add an agent's actions to this container's actions dict for quick access.
-        """
-        for action in agent.actions.values():
-            if action['name'] not in self.actions:
-                self.actions[action['name']] = []
-            if agent not in self.actions[action['name']]:
-                self.actions[action['name']].append(agent)
-
-    def remove_agent_actions(self, agent: AbstractAgent):
-        """
-        Remove agent's actions from actions dict.
-        """
-        for action in agent.actions.values():
-            if action['name'] not in self.actions:
-                continue
-            self.actions[action['name']].remove(agent)
+    def has_agent(self, agent_id) -> bool:
+        return agent_id in self.agents
 
     def invoke_action(self, name: str, parameters: Dict[str, str]) -> str:
         """
         Invoke action on any agent that knows the action.
         """
         for agent in self.agents.values():
-            action = agent.get_action(name)
-            if action is not None:
+            if agent.knows_action(name):
                 return agent.invoke_action(name, parameters)
         raise http_error(400, f'Unknown action: {name}.')
 
@@ -84,9 +55,8 @@ class Container:
         """
         Invoke action on the specified agent.
         """
-        agent = self.get_agent(agent_id)
-        if agent is not None:
-            return agent.invoke_action(name, parameters)
+        if self.has_agent(agent_id):
+            return self.get_agent(agent_id).invoke_action(name, parameters)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
     def send_message(self, agent_id: str, message: Message):

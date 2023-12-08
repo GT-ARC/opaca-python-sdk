@@ -2,8 +2,11 @@ import os, json
 from fastapi import FastAPI
 from typing import List, Dict, Union, Any
 
+from starlette.responses import StreamingResponse
+
 from src import Container, SampleAgent
-from Models import Message, AgentDescription, ContainerDescription
+from Models import Message, AgentDescription, ContainerDescription, ImageDescription
+from src.Utils import http_error
 
 
 def get_environment_variable(name: str):
@@ -17,17 +20,22 @@ def load_image_params():
         return json.load(f)
 
 
+def load_image():
+    try:
+        return ImageDescription(**load_image_params())
+    except TypeError:
+        return http_error(500, 'Failed to load image description.')
+
+
 def init_container():
     container_id = get_environment_variable('CONTAINER_ID')
     platform_url = get_environment_variable('PLATFORM_URL')
-    image_params = load_image_params()
-    ctr = Container(container_id, platform_url)
-    ctr.set_image(**image_params)
+    ctr = Container(container_id, platform_url, load_image())
     return ctr
 
 
 # main fastapi app object
-app = FastAPI(debug=True, title='Container Agent')
+app = FastAPI(debug=True, title='Sample Container Python')
 
 
 # main (singular) container instance
@@ -66,7 +74,15 @@ def send_message(agentId: str, message: Message):
     container.send_message(agentId, message)
 
 
-@app.post('/invoke/{action}', response_model=Union[str, int, float, Dict, List])
+@app.post('/broadcast/{channel}')
+def broadcast(channel: str, message: Message):
+    """
+    Broadcast a message to all agents that listen on the channel.
+    """
+    container.broadcast(channel, message)
+
+
+@app.post('/invoke/{action}', response_model=Any)
 def invoke_action(action: str, parameters: Dict[str, Any]):
     """
     Invoke the specified action on any agent that knows the action.
@@ -74,19 +90,29 @@ def invoke_action(action: str, parameters: Dict[str, Any]):
     return container.invoke_action(action, parameters)
 
 
-@app.post('/invoke/{action}/{agentId}', response_model=Union[str, int, float, Dict, List])
+@app.post('/invoke/{action}/{agentId}', response_model=Any)
 def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any]):
     """
     Invoke an action on a specific agent.
     """
     return container.invoke_agent_action(action, agentId, parameters)
 
-@app.post('/broadcast/{channel}')
-def broadcast(channel: str, message: Message):
+
+@app.get('/stream/{streamId}', response_model=StreamingResponse)
+def get_stream(streamId: str):
     """
-    Broadcast a message to all agents that listen on the channel.
+    TODO: GET a stream from this container.
     """
-    container.broadcast(channel, message)
+    return None
+
+
+@app.post('/stream/{streamId}', response_model=Any)
+def post_stream(streamId: str):
+    """
+    TODO: POST a stream to this container.
+        see e.g. https://stackoverflow.com/questions/71867214/how-can-i-post-data-in-real-time-using-fastapi
+    """
+    return None
 
 
 def main():
