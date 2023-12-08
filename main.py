@@ -1,11 +1,10 @@
 import os, json
+from typing import List, Dict, Any
 from fastapi import FastAPI
-from typing import List, Dict, Union, Any
-
 from starlette.responses import StreamingResponse
 
 from src import Container, SampleAgent
-from Models import Message, AgentDescription, ContainerDescription, ImageDescription
+from Models import Message, AgentDescription, ContainerDescription, ImageDescription, StreamDescription
 from src.Utils import http_error
 
 
@@ -98,21 +97,28 @@ def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any]):
     return container.invoke_agent_action(action, agentId, parameters)
 
 
-@app.get('/stream/{streamId}', response_model=StreamingResponse)
-def get_stream(streamId: str):
+@app.get('/stream/{stream}', response_class=StreamingResponse)
+async def get_stream(stream: str):
     """
-    TODO: GET a stream from this container.
+    GET a stream from any agent.
     """
-    return None
+    return make_stream_response(stream, StreamDescription.Mode.GET)
 
 
-@app.post('/stream/{streamId}', response_model=Any)
-def post_stream(streamId: str):
+@app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
+def get_agent_stream(stream: str, agent_id: str):
     """
-    TODO: POST a stream to this container.
-        see e.g. https://stackoverflow.com/questions/71867214/how-can-i-post-data-in-real-time-using-fastapi
+    GET a stream from the specified agent.
     """
-    return None
+    return make_stream_response(stream, StreamDescription.Mode.GET, agent_id)
+
+
+def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None) -> StreamingResponse:
+    """
+    Converts the byte stream from the stream invocation into the correct response format.
+    """
+    result = container.invoke_stream(name, mode) if agent_id is None else container.invoke_agent_stream(name, mode, agent_id)
+    return StreamingResponse(result, media_type='application/octet-stream')
 
 
 def main():

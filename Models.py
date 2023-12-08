@@ -16,8 +16,8 @@ class ActionDescription(BaseModel):
 
 class StreamDescription(BaseModel):
     class Mode(Enum):
-        GET = 0
-        POST = 1
+        GET = 'GET'
+        POST = 'POST'
     name: str
     mode: Mode
 

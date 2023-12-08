@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from src import AbstractAgent
-from Models import ContainerDescription, AgentDescription, Message, ImageDescription
+from Models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription
 from src.Utils import http_error
 
 
@@ -57,6 +57,23 @@ class Container:
         """
         if self.has_agent(agent_id):
             return self.get_agent(agent_id).invoke_action(name, parameters)
+        raise http_error(400, f'Unknown agent: {agent_id}.')
+
+    def invoke_stream(self, name: str, mode: StreamDescription.Mode):
+        """
+        GET a stream from or POST a stream to any agent that knows the stream.
+        """
+        for agent in self.agents.values():
+            if agent.knows_stream(name):
+                return agent.invoke_stream(name, mode)
+        raise http_error(400, f'Unknown stream: {name}.')
+
+    def invoke_agent_stream(self, name: str, mode: StreamDescription.Mode, agent_id: str = '') -> bytes:
+        """
+        GET a stream from or POST a stream to the specified agent.
+        """
+        if self.has_agent(agent_id):
+            return self.get_agent(agent_id).invoke_stream(name, mode)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
     def send_message(self, agent_id: str, message: Message):

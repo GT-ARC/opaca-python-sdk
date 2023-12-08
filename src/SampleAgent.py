@@ -1,6 +1,6 @@
 
 from src import AbstractAgent
-from Models import Message
+from Models import Message, StreamDescription
 
 
 class SampleAgent(AbstractAgent):
@@ -29,6 +29,11 @@ class SampleAgent(AbstractAgent):
             result='String',
             callback=self.time_consuming_action
         )
+        self.add_stream(
+            name='sampleStream',
+            mode=StreamDescription.Mode.GET,
+            callback=self.sample_stream
+        )
 
     def sample_action_1(self, param1: str, param2: int) -> str:
         return f'{self.agent_id} executed sampleAction1 with params: {param1}, {param2}'
@@ -46,6 +51,9 @@ class SampleAgent(AbstractAgent):
         from time import sleep
         sleep(60 + time_offset)
         return f'{text}, {time_offset}'
+
+    async def sample_stream(self):
+        yield b'sampleStream data'
 
     def receive_message(self, message: Message):
         super().receive_message(message)

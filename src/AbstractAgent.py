@@ -1,8 +1,8 @@
-from typing import Dict, List
+from typing import Dict, List, Callable
 import uuid
 
 from src import Container
-from Models import AgentDescription, ActionDescription, Message
+from Models import AgentDescription, ActionDescription, Message, StreamDescription
 from src.Utils import http_error
 
 
@@ -18,7 +18,7 @@ class AbstractAgent:
 
     def get_action(self, name: str):
         """
-        Get data about the action with the specified name.
+        Get data for the action with the specified name.
         """
         if self.knows_action(name):
             return self.actions[name]
@@ -34,12 +34,20 @@ class AbstractAgent:
         """
         Add an action to the publicly visible list of actions this agent can perform.
         """
-        self.actions[name] = {
-            'name': name,
-            'parameters': parameters,
-            'result': result,
-            'callback': callback
-        }
+        if not self.knows_action(name):
+            self.actions[name] = {
+                'name': name,
+                'parameters': parameters,
+                'result': result,
+                'callback': callback
+            }
+
+    def remove_action(self, name: str):
+        """
+        Removes an action from this agent's action list.
+        """
+        if self.knows_action(name):
+            del self.actions[name]
 
     def invoke_action(self, name: str, parameters: Dict):
         """
@@ -50,7 +58,52 @@ class AbstractAgent:
         try:
             return self.get_action(name)['callback'](**parameters)
         except TypeError:
-            raise http_error(400, f'Invalid action parameters. Provided: {parameters}, Needed: {action["parameters"]}')
+            raise http_error(400, f'Invalid action parameters. Provided: {parameters}, Needed: {self.get_action(name)["parameters"]}')
+
+    def get_stream(self, name: str):
+        """
+        Get data for the stream with the specified name.
+        """
+        if self.knows_stream(name):
+            return self.streams[name]
+        return None
+
+    def knows_stream(self, name: str) -> bool:
+        """
+        Check if the agent knows the stream with the given name.
+        """
+        return name in self.streams
+
+    def add_stream(self, name: str, mode: StreamDescription.Mode, callback):
+        """
+        Add a stream to this agent's action publically visible list of streams.
+        """
+        if not self.knows_stream(name):
+            self.streams[name] = {
+                'name': name,
+                'mode': mode,
+                'callback': callback
+            }
+
+    def invoke_stream(self, name: str, mode: StreamDescription.Mode):
+        """
+        GET a stream response from this agent or POST a stream to it.
+        """
+        if not self.knows_stream(name):
+            raise http_error(400, f'Unknown stream: {name}.')
+        if mode == StreamDescription.Mode.GET:
+            return self.get_stream(name)['callback']()
+        elif mode == StreamDescription.Mode.POST:
+            raise http_error(500, f'Functionality for POSTing streams not yet implemented.')
+        else:
+            raise http_error(400, f'Unknown mode: {mode}')
+
+    def remove_stream(self, name: str):
+        """
+        Removes a stream from this agent's stream list.
+        """
+        if not self.knows_stream(name):
+            del self.streams[name]
 
     def receive_message(self, message: Message):
         """
@@ -76,13 +129,21 @@ class AbstractAgent:
         return AgentDescription(
             agentId=self.agent_id,
             agentType=self.agent_type,
-            actions=[self.make_action_description(action_name) for action_name in self.actions]
+            actions=[self.make_action_description(action_name) for action_name in self.actions],
+            streams=[self.make_stream_description(stream_name) for stream_name in self.streams]
         )
 
     def make_action_description(self, action_name: str):
-        action = self.actions[action_name]
+        action = self.get_action(action_name)
         return ActionDescription(
             name=action['name'],
             parameters=action['parameters'],
             result=action['result']
+        )
+
+    def make_stream_description(self, stream_name: str):
+        stream = self.get_stream(stream_name)
+        return StreamDescription(
+            name=stream['name'],
+            mode=stream['mode']
         )
