@@ -1,17 +1,11 @@
-import os, json
+import json
 from typing import List, Dict, Any
 from fastapi import FastAPI
 from starlette.responses import StreamingResponse
 
 from src import Container, SampleAgent
 from Models import Message, AgentDescription, ContainerDescription, ImageDescription, StreamDescription
-from src.Utils import http_error
-
-
-def get_environment_variable(name: str):
-    if name in os.environ:
-        return os.environ.get(name)
-    return ''
+from src.Utils import http_error, get_environment_variable
 
 
 def load_image_params():
@@ -117,7 +111,8 @@ def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str 
     """
     Converts the byte stream from the stream invocation into the correct response format.
     """
-    result = container.invoke_stream(name, mode) if agent_id is None else container.invoke_agent_stream(name, mode, agent_id)
+    result = container.invoke_stream(name, mode) if agent_id is None \
+        else container.invoke_agent_stream(name, mode, agent_id)
     return StreamingResponse(result, media_type='application/octet-stream')
 
 

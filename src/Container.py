@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from datetime import datetime
+from typing import Dict, List
 
 from src import AbstractAgent
 from Models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription

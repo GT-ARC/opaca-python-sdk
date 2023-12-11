@@ -58,4 +58,3 @@ class SampleAgent(AbstractAgent):
     def receive_message(self, message: Message):
         super().receive_message(message)
         print(f'{self.agent_id} received message: {message}')
-

@@ -1,4 +1,4 @@
-from typing import Dict, List, Callable
+from typing import Dict, List
 import uuid
 
 from src import Container
@@ -58,7 +58,8 @@ class AbstractAgent:
         try:
             return self.get_action(name)['callback'](**parameters)
         except TypeError:
-            raise http_error(400, f'Invalid action parameters. Provided: {parameters}, Needed: {self.get_action(name)["parameters"]}')
+            raise http_error(400, f'Invalid action parameters. '
+                                  f'Provided: {parameters}, Needed: {self.get_action(name)["parameters"]}')
 
     def get_stream(self, name: str):
         """
@@ -76,7 +77,7 @@ class AbstractAgent:
 
     def add_stream(self, name: str, mode: StreamDescription.Mode, callback):
         """
-        Add a stream to this agent's action publically visible list of streams.
+        Add a stream to this agent's action publicly visible list of streams.
         """
         if not self.knows_stream(name):
             self.streams[name] = {
