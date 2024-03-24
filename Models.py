@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from enum import Enum
 
 
@@ -8,11 +8,14 @@ class Message(BaseModel):
     replyTo: str = ''
 
 
+class Parameter(BaseModel):
+    type: str
+    required: bool
+
 class ActionDescription(BaseModel):
     name: str
-    parameters: Dict[str, str]
+    parameters: Dict[str, Parameter]
     result: str
-
 
 class StreamDescription(BaseModel):
     class Mode(Enum):
@@ -35,6 +38,8 @@ class AgentDescription(BaseModel):
     agentType: str
     actions: List[ActionDescription] = []
     streams: List[StreamDescription] = []
+
+
 
 
 class ImageDescription(BaseModel):

@@ -2,7 +2,7 @@ from typing import Dict, List
 import uuid
 
 from src import Container
-from Models import AgentDescription, ActionDescription, Message, StreamDescription
+from Models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
 from src.Utils import http_error
 
 
@@ -127,11 +127,22 @@ class AbstractAgent:
             self.container.unsubscribe_channel(channel, self)
 
     def make_description(self) -> AgentDescription:
+        action_descriptions = []
+        for action_name in self.actions:
+            parameter = Parameter(type=action_name, required=True)
+            action_description = ActionDescription(
+                name=action_name,
+                parameters={action_name: parameter},
+                result=""
+            )
+            action_descriptions.append(action_description)
+        stream_descriptions = [self.make_stream_description(stream_name) for stream_name in self.streams]
+
         return AgentDescription(
             agentId=self.agent_id,
             agentType=self.agent_type,
-            actions=[self.make_action_description(action_name) for action_name in self.actions],
-            streams=[self.make_stream_description(stream_name) for stream_name in self.streams]
+            actions=action_descriptions,
+            streams=stream_descriptions
         )
 
     def make_action_description(self, action_name: str):
