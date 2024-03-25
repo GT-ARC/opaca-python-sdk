@@ -13,19 +13,19 @@ class SampleAgent(AbstractAgent):
         super(SampleAgent, self).__init__(**kwargs)
         self.add_action(
             name='sampleAction1',
-            parameters={'param1': 'String', 'param2': 'Int'},
+            parameters={'param1': {'type': 'String', 'required': 'true'}, 'param2': {'type': 'Int', 'required': 'true'}},
             result='String',
             callback=self.sample_action_1
         )
         self.add_action(
             name='add',
-            parameters={'x': 'Int', 'y': 'Int'},
+            parameters={'x': {'type': 'Int', 'required': 'true'}, 'y': {'type': 'Int', 'required': 'true'}},
             result='Int',
             callback=self.add
         )
         self.add_action(
             name='timeConsumingAction',
-            parameters={'text': 'String', 'time_offset': 'Int'},
+            parameters={'text': {'type': 'String', 'required': 'true'}, 'time_offset': {'type': 'Int', 'required': 'true'}},
             result='String',
             callback=self.time_consuming_action
         )
