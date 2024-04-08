@@ -1,6 +1,6 @@
 
 from src import AbstractAgent
-from Models import Message, StreamDescription
+from Models import Message, StreamDescription, Parameter
 
 
 class SampleAgent(AbstractAgent):
@@ -13,20 +13,20 @@ class SampleAgent(AbstractAgent):
         super(SampleAgent, self).__init__(**kwargs)
         self.add_action(
             name='sampleAction1',
-            parameters={'param1': {'type': 'String', 'required': 'true'}, 'param2': {'type': 'Int', 'required': 'true'}},
-            result='String',
+            parameters={'param1': Parameter(type='string'), 'param2': Parameter(type='integer')},
+            result=Parameter(type='string'),
             callback=self.sample_action_1
         )
         self.add_action(
             name='add',
-            parameters={'x': {'type': 'Int', 'required': 'true'}, 'y': {'type': 'Int', 'required': 'true'}},
-            result='Int',
+            parameters={'x': Parameter(type='integer'), 'y': Parameter(type='integer')},
+            result=Parameter(type='integer'),
             callback=self.add
         )
         self.add_action(
             name='timeConsumingAction',
-            parameters={'text': {'type': 'String', 'required': 'true'}, 'time_offset': {'type': 'Int', 'required': 'true'}},
-            result='String',
+            parameters={'test': Parameter(type='string'), 'time_offset': Parameter(type='integer')},
+            result=Parameter(type='string'),
             callback=self.time_consuming_action
         )
         self.add_stream(

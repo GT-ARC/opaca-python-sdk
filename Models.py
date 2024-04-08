@@ -10,7 +10,8 @@ class Message(BaseModel):
 
 class Parameter(BaseModel):
     type: str
-    required: bool
+    required: bool = True
+
 
 class ActionDescription(BaseModel):
     name: str

@@ -30,7 +30,7 @@ class AbstractAgent:
         """
         return name in self.actions
 
-    def add_action(self, name: str, parameters: Dict[str, str], result: str, callback):
+    def add_action(self, name: str, parameters: Dict[str, Parameter], result: Parameter, callback):
         """
         Add an action to the publicly visible list of actions this agent can perform.
         """
