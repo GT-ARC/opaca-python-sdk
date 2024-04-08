@@ -134,7 +134,6 @@ class AbstractAgent:
             streams=[self.make_stream_description(stream_name) for stream_name in self.streams]
         )
 
-
     def make_action_description(self, action_name: str):
         action = self.get_action(action_name)
         return ActionDescription(

@@ -16,7 +16,8 @@ class Parameter(BaseModel):
 class ActionDescription(BaseModel):
     name: str
     parameters: Dict[str, Parameter]
-    result: str
+    result: Parameter
+
 
 class StreamDescription(BaseModel):
     class Mode(Enum):
@@ -41,8 +42,6 @@ class AgentDescription(BaseModel):
     streams: List[StreamDescription] = []
 
 
-
-
 class ImageDescription(BaseModel):
     class PortDescription(BaseModel):
         protocol: str
@@ -57,11 +56,15 @@ class ImageDescription(BaseModel):
     apiPort: int = 8082
     extraPorts: Dict[int, PortDescription] = {}
     parameters: List[ImageParameter] = []
+    definitions: Dict[str, Any] = {}
+    definitionsByUrl: Dict[str, str] = {}
 
 
 class ContainerDescription(BaseModel):
     containerId: str
     image: ImageDescription
+    arguments: Dict[str, str] = {}
     agents: List[AgentDescription] = []
+    owner: str = ''
     runningSince: str
     connectivity: None = None
