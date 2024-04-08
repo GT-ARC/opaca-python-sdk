@@ -1,6 +1,6 @@
 
 from src import AbstractAgent
-from Models import Message, StreamDescription
+from Models import Message, StreamDescription, Parameter
 
 
 class SampleAgent(AbstractAgent):
@@ -13,20 +13,20 @@ class SampleAgent(AbstractAgent):
         super(SampleAgent, self).__init__(**kwargs)
         self.add_action(
             name='sampleAction1',
-            parameters={'param1': 'String', 'param2': 'Int'},
-            result='String',
+            parameters={'param1': Parameter(type='string'), 'param2': Parameter(type='integer')},
+            result=Parameter(type='string'),
             callback=self.sample_action_1
         )
         self.add_action(
             name='add',
-            parameters={'x': 'Int', 'y': 'Int'},
-            result='Int',
+            parameters={'x': Parameter(type='integer'), 'y': Parameter(type='integer')},
+            result=Parameter(type='integer'),
             callback=self.add
         )
         self.add_action(
             name='timeConsumingAction',
-            parameters={'text': 'String', 'time_offset': 'Int'},
-            result='String',
+            parameters={'test': Parameter(type='string'), 'time_offset': Parameter(type='integer')},
+            result=Parameter(type='string'),
             callback=self.time_consuming_action
         )
         self.add_stream(

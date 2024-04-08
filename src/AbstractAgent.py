@@ -2,7 +2,7 @@ from typing import Dict, List
 import uuid
 
 from src import Container
-from Models import AgentDescription, ActionDescription, Message, StreamDescription
+from Models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
 from src.Utils import http_error
 
 
@@ -30,7 +30,7 @@ class AbstractAgent:
         """
         return name in self.actions
 
-    def add_action(self, name: str, parameters: Dict[str, str], result: str, callback):
+    def add_action(self, name: str, parameters: Dict[str, Parameter], result: Parameter, callback):
         """
         Add an action to the publicly visible list of actions this agent can perform.
         """
