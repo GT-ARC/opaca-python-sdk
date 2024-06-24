@@ -45,10 +45,7 @@ class SampleAgent(AbstractAgent):
 
     def add(self, x: int, y: int) -> int:
         print(f'{self.agent_id} executed add with params: {x}, {y}')
-        try:
-            return int(x) + int(y)
-        except ValueError:
-            return 0
+        return x + y
 
     def time_consuming_action(self, text: str, sleep_time: int = 0) -> str:
         sleep_time = int(sleep_time)
