@@ -1,19 +1,19 @@
-from typing import Dict, List
+from typing import Dict, List, Any, Optional
 import uuid
 
-from src import Container
+from src.Container import Container
 from Models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
 from src.Utils import http_error
 
 
 class AbstractAgent:
 
-    def __init__(self, agent_id: str = '', agent_type: str = '', container: Container = None):
+    def __init__(self, agent_id: str = '', agent_type: str = '', container: Optional[Container] = None):
         self.agent_id: str = agent_id if agent_id else str(uuid.uuid4())
         self.agent_type: str = agent_type
-        self.container: Container = container
-        self.actions: Dict[str, Dict] = {}
-        self.streams: Dict[str, Dict] = {}
+        self.container: Optional[Container] = container
+        self.actions: Dict[str, Dict[str, Any]] = {}
+        self.streams: Dict[str, Dict[str, Any]] = {}
         self.messages: List[Message] = []
 
     def get_action(self, name: str):
@@ -30,13 +30,14 @@ class AbstractAgent:
         """
         return name in self.actions
 
-    def add_action(self, name: str, parameters: Dict[str, Parameter], result: Parameter, callback):
+    def add_action(self, name: str, description: Optional[str], parameters: Dict[str, Parameter], result: Parameter, callback):
         """
         Add an action to the publicly visible list of actions this agent can perform.
         """
         if not self.knows_action(name):
             self.actions[name] = {
                 'name': name,
+                'description': description,
                 'parameters': parameters,
                 'result': result,
                 'callback': callback
@@ -58,8 +59,8 @@ class AbstractAgent:
         try:
             return self.get_action(name)['callback'](**parameters)
         except TypeError:
-            raise http_error(400, f'Invalid action parameters. '
-                                  f'Provided: {parameters}, Needed: {self.get_action(name)["parameters"]}')
+            msg = f'Invalid action parameters. Provided: {parameters}, Required: {self.get_action(name)["parameters"]}'
+            raise http_error(400, msg)
 
     def get_stream(self, name: str):
         """
@@ -75,13 +76,14 @@ class AbstractAgent:
         """
         return name in self.streams
 
-    def add_stream(self, name: str, mode: StreamDescription.Mode, callback):
+    def add_stream(self, name: str, description: Optional[str], mode: StreamDescription.Mode, callback):
         """
         Add a stream to this agent's action publicly visible list of streams.
         """
         if not self.knows_stream(name):
             self.streams[name] = {
                 'name': name,
+                'description': description,
                 'mode': mode,
                 'callback': callback
             }
@@ -121,7 +123,7 @@ class AbstractAgent:
 
     def unsubscribe_channel(self, channel: str):
         """
-        Subscribe to a broadcasting channel.
+        Unsubscribe from a broadcasting channel.
         """
         if self.container is not None:
             self.container.unsubscribe_channel(channel, self)
@@ -138,6 +140,7 @@ class AbstractAgent:
         action = self.get_action(action_name)
         return ActionDescription(
             name=action['name'],
+            description=action['description'],
             parameters=action['parameters'],
             result=action['result']
         )
@@ -146,5 +149,6 @@ class AbstractAgent:
         stream = self.get_stream(stream_name)
         return StreamDescription(
             name=stream['name'],
+            description=stream['description'],
             mode=stream['mode']
         )
