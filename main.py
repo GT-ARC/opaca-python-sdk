@@ -5,7 +5,7 @@ from starlette.responses import StreamingResponse
 
 from src import Container, SampleAgent
 from Models import Message, AgentDescription, ContainerDescription, ImageDescription, StreamDescription
-from src.Utils import http_error, get_environment_variable
+from src.Utils import http_error, get_env_var
 
 
 def load_image_params():
@@ -21,8 +21,8 @@ def load_image():
 
 
 def init_container():
-    container_id = get_environment_variable('CONTAINER_ID')
-    platform_url = get_environment_variable('PLATFORM_URL')
+    container_id = get_env_var('CONTAINER_ID', '')
+    platform_url = get_env_var('PLATFORM_URL', '')
     ctr = Container(container_id, platform_url, load_image())
     return ctr
 

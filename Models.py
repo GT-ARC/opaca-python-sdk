@@ -34,7 +34,7 @@ class ImageParameter(BaseModel):
     type: str
     required: bool = False
     confidential: bool = False
-    defaultValue: str = None
+    defaultValue: Optional[str] = None
 
 
 class AgentDescription(BaseModel):
