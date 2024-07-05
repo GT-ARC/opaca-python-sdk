@@ -1,4 +1,20 @@
 {
-  "imageName": "sample-container-python",
-  "version": "0.0.1"
+	"imageName": "sample-container-python",
+	"version": "0.0.1",
+	"parameters": [
+		{
+			"name": "visibleParam",
+			"type": "string",
+			"required": false,
+			"confidential": false,
+			"defaultValue": null
+		},
+		{
+			"name": "secretParam",
+			"type": "string",
+			"required": false,
+			"confidential": true,
+			"defaultValue": null
+		}
+	]
 }

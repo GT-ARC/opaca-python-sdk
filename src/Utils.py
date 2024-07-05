@@ -1,4 +1,6 @@
 import os
+from typing import Optional, Any
+
 from fastapi import HTTPException
 
 
@@ -9,7 +11,7 @@ def http_error(code: int, cause: str) -> HTTPException:
     return HTTPException(status_code=code, detail={"cause": cause})
 
 
-def get_environment_variable(name: str):
+def get_env_var(name: str, default_value: Any = None) -> Optional[str]:
     if name in os.environ:
         return os.environ.get(name)
-    return ''
+    return default_value

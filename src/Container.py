@@ -3,7 +3,7 @@ from typing import Dict, List
 
 from src import AbstractAgent
 from Models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription
-from src.Utils import http_error
+from src.Utils import http_error, get_env_var
 
 
 class Container:
@@ -116,6 +116,7 @@ class Container:
         return ContainerDescription(
             containerId=self.container_id,
             image=self.image,
+            arguments=self.get_arguments(False),
             agents=self.get_agent_descriptions(),
             runningSince=self.get_running_since(),
             connectivity=None
@@ -125,4 +126,9 @@ class Container:
         return [agent.make_description() for agent in self.agents.values()]
 
     def get_running_since(self):
-        return self.started_at.isoformat(timespec="milliseconds") + "Z"
+        return f'{self.started_at.isoformat(timespec="milliseconds")}Z'
+
+    def get_arguments(self, include_confidential: bool = True) -> Dict[str, str]:
+        return { param.name: get_env_var(param.name, param.defaultValue)
+                 for param in self.image.parameters
+                 if include_confidential or not param.confidential }
