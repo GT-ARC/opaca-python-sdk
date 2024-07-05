@@ -15,6 +15,7 @@ class Parameter(BaseModel):
 
 class ActionDescription(BaseModel):
     name: str
+    description: str
     parameters: Dict[str, Parameter]
     result: Parameter
 
@@ -24,6 +25,7 @@ class StreamDescription(BaseModel):
         GET = 'GET'
         POST = 'POST'
     name: str
+    description: str
     mode: Mode
 
 

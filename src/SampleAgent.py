@@ -1,3 +1,4 @@
+from time import sleep
 
 from src import AbstractAgent
 from Models import Message, StreamDescription, Parameter
@@ -12,45 +13,45 @@ class SampleAgent(AbstractAgent):
     def __init__(self, **kwargs):
         super(SampleAgent, self).__init__(**kwargs)
         self.add_action(
-            name='sampleAction1',
+            name='SampleAction',
+            description='Returns a simple string acknowledging the action\'s execution with the given parameters.',
             parameters={'param1': Parameter(type='string'), 'param2': Parameter(type='integer')},
             result=Parameter(type='string'),
-            callback=self.sample_action_1
+            callback=self.sample_action
         )
         self.add_action(
-            name='add',
+            name='Add',
+            description='Adds the two numbers and returns the result.',
             parameters={'x': Parameter(type='integer'), 'y': Parameter(type='integer')},
             result=Parameter(type='integer'),
             callback=self.add
         )
         self.add_action(
-            name='timeConsumingAction',
-            parameters={'test': Parameter(type='string'), 'time_offset': Parameter(type='integer')},
+            name='TimeConsumingAction',
+            description='Returns the given text after waiting for the given time + 1 in seconds.',
+            parameters={'text': Parameter(type='string'), 'sleep_time': Parameter(type='integer')},
             result=Parameter(type='string'),
             callback=self.time_consuming_action
         )
         self.add_stream(
-            name='sampleStream',
+            name='SampleStream',
+            description='Returns a sample stream value.',
             mode=StreamDescription.Mode.GET,
             callback=self.sample_stream
         )
 
-    def sample_action_1(self, param1: str, param2: int) -> str:
+    def sample_action(self, param1: str, param2: int) -> str:
         return f'{self.agent_id} executed sampleAction1 with params: {param1}, {param2}'
 
     def add(self, x: int, y: int) -> int:
         print(f'{self.agent_id} executed add with params: {x}, {y}')
-        try:
-            return int(x) + int(y)
-        except ValueError:
-            return 0
+        return x + y
 
-    def time_consuming_action(self, text: str, time_offset: str = 0) -> str:
-        time_offset = int(time_offset)
-        print(f'{self.agent_id} executing time_consuming action, taking approx {60 + time_offset} seconds')
-        from time import sleep
-        sleep(60 + time_offset)
-        return f'{text}, {time_offset}'
+    def time_consuming_action(self, text: str, sleep_time: int = 0) -> str:
+        sleep_time = int(sleep_time)
+        print(f'{self.agent_id} executing time_consuming action, taking approx {1 + sleep_time} seconds')
+        sleep(1 + sleep_time)
+        return text
 
     async def sample_stream(self):
         yield b'sampleStream data'
