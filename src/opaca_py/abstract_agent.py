@@ -1,17 +1,16 @@
 from typing import Dict, List, Any, Optional
 import uuid
 
-from src.Container import Container
-from Models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
-from src.Utils import http_error
+from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
+from .utils import http_error
 
 
 class AbstractAgent:
 
-    def __init__(self, agent_id: str = '', agent_type: str = '', container: Optional[Container] = None):
+    def __init__(self, agent_id: str = '', agent_type: str = '', container: Optional['Container'] = None):
         self.agent_id: str = agent_id if agent_id else str(uuid.uuid4())
         self.agent_type: str = agent_type
-        self.container: Optional[Container] = container
+        self.container: Optional['Container'] = container
         self.actions: Dict[str, Dict[str, Any]] = {}
         self.streams: Dict[str, Dict[str, Any]] = {}
         self.messages: List[Message] = []
@@ -50,7 +49,7 @@ class AbstractAgent:
         if self.knows_action(name):
             del self.actions[name]
 
-    def invoke_action(self, name: str, parameters: Dict):
+    def invoke_action(self, name: str, parameters: Dict) -> Any:
         """
         Invoke action on this agent.
         """

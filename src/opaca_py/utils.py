@@ -15,3 +15,4 @@ def get_env_var(name: str, default_value: Any = None) -> Optional[str]:
     if name in os.environ:
         return os.environ.get(name)
     return default_value
+

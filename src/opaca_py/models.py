@@ -65,7 +65,7 @@ class ImageDescription(BaseModel):
 class ContainerDescription(BaseModel):
     containerId: str
     image: ImageDescription
-    arguments: Dict[str, str] = {}
+    arguments: Dict[str, Any] = {}
     agents: List[AgentDescription] = []
     owner: str = ''
     runningSince: str

@@ -1,16 +1,19 @@
 from datetime import datetime
 from typing import Dict, List
 
-from src import AbstractAgent
-from Models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription
-from src.Utils import http_error, get_env_var
+from .abstract_agent import AbstractAgent
+from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription
+from .utils import http_error, get_env_var
 
 
 class Container:
 
-    def __init__(self, container_id: str, platform_url: str, image: ImageDescription):
-        self.container_id: str = container_id
-        self.platform_url: str = platform_url
+    def __init__(self, image: ImageDescription):
+        self.container_id = get_env_var('CONTAINER_ID', '')
+        self.platform_url = get_env_var('PLATFORM_URL', '')
+        self.token = get_env_var('TOKEN', '')
+        self.owner = get_env_var('OWNER', '')
+
         self.image: ImageDescription = image
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.utcnow()
@@ -118,6 +121,7 @@ class Container:
             image=self.image,
             arguments=self.get_arguments(False),
             agents=self.get_agent_descriptions(),
+            owner=self.owner,
             runningSince=self.get_running_since(),
             connectivity=None
         )
