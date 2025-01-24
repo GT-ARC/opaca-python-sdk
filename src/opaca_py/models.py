@@ -10,20 +10,20 @@ class Message(BaseModel):
 
 class Parameter(BaseModel):
 
-    class Items(BaseModel):
+    class ArrayItems(BaseModel):
         type: str
-        items: Optional['Parameter.Items'] = None
+        items: Optional['Parameter.ArrayItems'] = None
 
     @staticmethod
     def list_of(type: str, required: bool = True) -> 'Parameter':
         """
         Utility function for making a shallow array parameter.
         """
-        return Parameter(type='array', required=required, items=Parameter.Items(type=type))
+        return Parameter(type='array', required=required, items=Parameter.ArrayItems(type=type))
 
     type: str
     required: bool = True
-    items: Optional[Items] = None
+    items: Optional[ArrayItems] = None
 
 
 class ActionDescription(BaseModel):
