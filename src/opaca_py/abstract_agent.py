@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
 import uuid
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
@@ -29,7 +29,7 @@ class AbstractAgent:
         """
         return name in self.actions
 
-    def add_action(self, name: str, description: Optional[str], parameters: Dict[str, Parameter], result: Parameter, callback):
+    def add_action(self, name: str, description: Optional[str], parameters: Dict[str, Parameter], result: Parameter, callback: Callable):
         """
         Add an action to the publicly visible list of actions this agent can perform.
         """
@@ -49,7 +49,7 @@ class AbstractAgent:
         if self.knows_action(name):
             del self.actions[name]
 
-    def invoke_action(self, name: str, parameters: Dict) -> Any:
+    def invoke_action(self, name: str, parameters: Dict[str, Any]) -> Optional[Any]:
         """
         Invoke action on this agent.
         """
@@ -61,7 +61,7 @@ class AbstractAgent:
             msg = f'Invalid action parameters. Provided: {parameters}, Required: {self.get_action(name)["parameters"]}'
             raise http_error(400, msg)
 
-    def get_stream(self, name: str):
+    def get_stream(self, name: str) -> Optional[Any]:
         """
         Get data for the stream with the specified name.
         """
@@ -75,7 +75,7 @@ class AbstractAgent:
         """
         return name in self.streams
 
-    def add_stream(self, name: str, description: Optional[str], mode: StreamDescription.Mode, callback):
+    def add_stream(self, name: str, description: Optional[str], mode: StreamDescription.Mode, callback: Callable):
         """
         Add a stream to this agent's action publicly visible list of streams.
         """
@@ -104,7 +104,7 @@ class AbstractAgent:
         """
         Removes a stream from this agent's stream list.
         """
-        if not self.knows_stream(name):
+        if self.knows_stream(name):
             del self.streams[name]
 
     def receive_message(self, message: Message):

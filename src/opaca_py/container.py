@@ -1,5 +1,7 @@
+import datetime as dt
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Any
+import json
 
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription
@@ -8,16 +10,28 @@ from .utils import http_error, get_env_var
 
 class Container:
 
-    def __init__(self, image: ImageDescription):
+    def __init__(self, path_to_image_file: str):
         self.container_id = get_env_var('CONTAINER_ID', '')
         self.platform_url = get_env_var('PLATFORM_URL', '')
         self.token = get_env_var('TOKEN', '')
         self.owner = get_env_var('OWNER', '')
 
-        self.image: ImageDescription = image
+        self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.utcnow()
         self.channels: Dict[str, List[AbstractAgent]] = {}
+
+    @staticmethod
+    def load_image(json_file: str) -> ImageDescription:
+        """
+        Load a container's image description from a json file.
+        """
+        try:
+            with open(json_file, encoding='utf-8') as f:
+                contents = json.load(f)
+                return ImageDescription(**contents)
+        except TypeError:
+            raise http_error(500, 'Failed to load image description.')
 
     def get_agent(self, agent_id: str) -> AbstractAgent:
         """
@@ -45,7 +59,7 @@ class Container:
     def has_agent(self, agent_id) -> bool:
         return agent_id in self.agents
 
-    def invoke_action(self, name: str, parameters: Dict[str, str]) -> str:
+    def invoke_action(self, name: str, parameters: Dict[str, Any]) -> str:
         """
         Invoke action on any agent that knows the action.
         """
@@ -54,7 +68,7 @@ class Container:
                 return agent.invoke_action(name, parameters)
         raise http_error(400, f'Unknown action: {name}.')
 
-    def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, str]):
+    def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any]):
         """
         Invoke action on the specified agent.
         """
