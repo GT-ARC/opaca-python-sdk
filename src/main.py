@@ -1,13 +1,11 @@
 from opaca_py.container import Container
 from opaca_py.routes import create_routes
-from opaca_py.utils import load_image
 
 from sample import SampleAgent
 
 
 # assemble Agent Container
-image = load_image("resources/container.json")
-container = Container(image)
+container = Container("resources/container.json")
 agent1 = SampleAgent(agent_id='sampleAgent1', agent_type='type1')
 container.add_agent(agent1)
 agent1.subscribe_channel('test_channel')
