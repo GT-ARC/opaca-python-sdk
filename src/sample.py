@@ -33,6 +33,13 @@ class SampleAgent(AbstractAgent):
             result=Parameter(type='string'),
             callback=self.time_consuming_action
         )
+        self.add_action(
+            name='Concatenate',
+            description='Concatenates the given array to a string and returns the result.',
+            parameters={'array': Parameter.list_of('string'), 'separator': Parameter(type='string', required=False)},
+            result=Parameter(type='string'),
+            callback=self.concatenate
+        )
         self.add_stream(
             name='SampleStream',
             description='Returns a sample stream value.',
@@ -52,6 +59,10 @@ class SampleAgent(AbstractAgent):
         print(f'{self.agent_id} executing time_consuming action, taking approx {1 + sleep_time} seconds')
         sleep(1 + sleep_time)
         return text
+
+    def concatenate(self, array: list[str], separator: str = ', ') -> str:
+        print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
+        return separator.join(array)
 
     async def sample_stream(self):
         yield b'sampleStream data'
