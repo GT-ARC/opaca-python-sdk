@@ -19,32 +19,45 @@ class AbstractAgent:
         self.register_actions()
 
     @classmethod
-    def action(cls, func: Callable):
-        func._is_action = True
-        return func
+    def action(cls, _func: Optional[Callable] = None, *, name: str = '', description: str = ''):
+        def decorator(func: Callable):
+            func._is_action = True
+            func._name = name
+            func._description = description
+            return func
+        return decorator(_func) if _func else decorator
 
     def register_actions(self):
         # Auto-Register actions marked by decorator
         for name, func in inspect.getmembers(self, predicate=inspect.ismethod):
             if not getattr(func, '_is_action', False):
                 continue
-            print(f'Registering {name}')
+
+            # Get method information
             sig = inspect.signature(func)
             type_hints = get_type_hints(func)
             params = {}
             return_type = type_hints.get('return', None)
 
+            # Get Parameter class from type hint
             for p_name, p_val in sig.parameters.items():
                 if p_name == 'self':
                     continue
-
                 hint = type_hints.get(p_name, None)
                 params[p_name] = python_type_to_parameters(hint, p_val.default)
 
-            action_name = ''.join(word.capitalize() for word in re.split(r'[_\-]', name))
+            # Get either passed name and description or use default
+            action_name = getattr(func, '_name', '')
+            if not action_name:
+                action_name = ''.join(word.capitalize() for word in re.split(r'[_\-]', name))
+            description = getattr(func, '_description', '')
+            if not description:
+                description = func.__doc__.strip() or ""
+
+            # Add action to agent instance
             self.add_action(
                 name=action_name,
-                description=func.__doc__.strip() or "",
+                description=description,
                 parameters=params,
                 result=python_type_to_parameters(return_type),
                 callback=getattr(self, name),
