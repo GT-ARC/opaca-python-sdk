@@ -1,6 +1,9 @@
+import inspect
 import os
 from typing import Optional, Any, get_origin, get_args, Union, List, Dict
 from fastapi import HTTPException
+
+from .models import Parameter
 
 
 def http_error(code: int, cause: str) -> HTTPException:
@@ -27,29 +30,50 @@ type_mapping = {
 }
 
 
-def python_type_to_json_type(py_type: Any) -> Any:
-    origin = get_origin(py_type)
-    args = get_args(py_type)
+def resolve_array_items(hint: Any) -> Parameter.ArrayItems:
+    origin = get_origin(hint)
+    args = get_args(hint)
 
-    if py_type in type_mapping:
-        return type_mapping[py_type]
+    if origin in {list, tuple} and args:
+        inner = args[0]
+        json_type = type_mapping[inner]
+        if get_origin(json_type) in {list, tuple}:
+            return Parameter.ArrayItems(
+                type="array",
+                items=resolve_array_items(inner),
+            )
+        return Parameter.ArrayItems(type=json_type)
+    else:
+        return Parameter.ArrayItems(type=type_mapping[hint])
 
-    elif origin is Union:
-        json_types = [python_type_to_json_type(arg) for arg in args]
-        # Remove duplicates
-        return list(set(json_types))
 
-    elif origin in (list, List):
-        return {
-            "type": "array",
-            "items": {"type": python_type_to_json_type(args[0]) if args else "object"}
-        }
+def python_type_to_parameters(hint: Any, default: Any = inspect.Parameter.empty) -> Any:
+    """
+    This method takes in parameter information and transforms it into a Parameter instance.
+    Supports nested parameter types as well
+    """
+    origin = get_origin(hint)
+    args = get_args(hint)
 
-    elif origin in (dict, Dict):
-        return {
-            "type": "object",
-            "additionalProperties": {"type": python_type_to_json_type(args[1]) if args else "object"}
-        }
+    required = default is inspect.Parameter.empty
 
-    # Fallback
-    return "object"
+    # Handle Union types or Optionals (Optional[str] == Union[str, None])
+    if origin is Union and type(None) in args:
+        required = False
+        # Remove NoneType from the args
+        args = [arg for arg in args if arg is not type(None)]
+        hint = args[0] if args else Any
+
+    # Handle arrays
+    if origin in {list, tuple}:
+        return Parameter(
+            type="array",
+            required=required,
+            items=resolve_array_items(hint)
+        )
+
+    # Handle base types
+    return Parameter(
+        type=type_mapping[hint],
+        required=required,
+    )
