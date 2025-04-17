@@ -1,5 +1,6 @@
 from time import sleep
 
+from opaca_py import action
 from opaca_py.abstract_agent import AbstractAgent
 from opaca_py.models import Message, StreamDescription, Parameter
 
@@ -70,3 +71,16 @@ class SampleAgent(AbstractAgent):
     def receive_message(self, message: Message):
         super().receive_message(message)
         print(f'{self.agent_id} received message: {message}')
+
+    @action
+    def decorated_action(self, msg: str) -> str:
+        """
+        This is the description of the decorated action.
+
+        Args:
+            msg: A simple test message.
+
+        Returns:
+            str: The same message.
+        """
+        return msg
