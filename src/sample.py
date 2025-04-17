@@ -1,6 +1,6 @@
 from time import sleep
 
-from opaca_py import action
+from opaca_py import action, stream
 from opaca_py.abstract_agent import AbstractAgent
 from opaca_py.models import Message, StreamDescription
 
@@ -13,12 +13,6 @@ class SampleAgent(AbstractAgent):
 
     def __init__(self, **kwargs):
         super(SampleAgent, self).__init__(**kwargs)
-        self.add_stream(
-            name='SampleStream',
-            description='Returns a sample stream value.',
-            mode=StreamDescription.Mode.GET,
-            callback=self.sample_stream
-        )
 
     @action
     def sample_action(self, param1: str, param2: int) -> str:
@@ -53,7 +47,11 @@ class SampleAgent(AbstractAgent):
         print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
         return separator.join(array)
 
+    @stream(mode=StreamDescription.Mode.GET)
     async def sample_stream(self):
+        """
+        Returns a sample stream value.
+        """
         yield b'sampleStream data'
 
     def receive_message(self, message: Message):
