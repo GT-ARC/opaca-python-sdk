@@ -1,6 +1,6 @@
 import inspect
 import os
-from typing import Optional, Any, get_origin, get_args, Union, List, Dict
+from typing import Optional, Any, get_origin, get_args, Union
 from fastapi import HTTPException
 
 from .models import Parameter
@@ -20,7 +20,7 @@ def get_env_var(name: str, default_value: Any = None) -> Optional[str]:
 
 
 type_mapping = {
-    int: "number",
+    int: "integer",
     float: "number",
     str: "string",
     bool: "boolean",

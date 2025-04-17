@@ -44,7 +44,7 @@ class AbstractAgent:
             action_name = ''.join(word.capitalize() for word in re.split(r'[_\-]', name))
             self.add_action(
                 name=action_name,
-                description=func.__doc__ or "",
+                description=func.__doc__.strip() or "",
                 parameters=params,
                 result=python_type_to_parameters(return_type),
                 callback=getattr(self, name),
