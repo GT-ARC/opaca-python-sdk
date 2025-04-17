@@ -16,5 +16,8 @@ app = create_routes("sample-container", container)
 
 if __name__ == "__main__":
     # start app (alternatively, start with `uvicorn` from command line)
+    import time
     import uvicorn
+    time.sleep(15)
+
     uvicorn.run(app, host="0.0.0.0", port=container.image.apiPort)
