@@ -4,11 +4,10 @@ from typing import Dict, List, Any, Optional, Callable, get_type_hints
 import uuid
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
-from .utils import http_error, python_type_to_json_type
+from .utils import http_error, python_type_to_parameters
 
 
 class AbstractAgent:
-    _registered_actions = {}
 
     def __init__(self, agent_id: str = '', agent_type: str = '', container: Optional['Container'] = None):
         self.agent_id: str = agent_id if agent_id else str(uuid.uuid4())
@@ -17,9 +16,18 @@ class AbstractAgent:
         self.actions: Dict[str, Dict[str, Any]] = {}
         self.streams: Dict[str, Dict[str, Any]] = {}
         self.messages: List[Message] = []
+        self.register_actions()
 
+    @classmethod
+    def action(cls, func: Callable):
+        func._is_action = True
+        return func
+
+    def register_actions(self):
         # Auto-Register actions marked by decorator
-        for name, func in self._registered_actions.items():
+        for name, func in inspect.getmembers(self, predicate=inspect.ismethod):
+            if not getattr(func, '_is_action', False):
+                continue
             print(f'Registering {name}')
             sig = inspect.signature(func)
             type_hints = get_type_hints(func)
@@ -30,34 +38,17 @@ class AbstractAgent:
                 if p_name == 'self':
                     continue
 
-                hint = type_hints.get(name, None)
-                if hint:
-                    converted = python_type_to_json_type(hint)
-                    if isinstance(converted, str):
-                        param_obj = Parameter(type=converted, required=(p_val.default == inspect.Parameter.empty))
-                    elif isinstance(converted, Parameter):
-                        param_obj = converted
-                        param_obj.required = (p_val.default == inspect.Parameter.empty)
-                    else:
-                        param_obj = Parameter(type='object', required=(p_val.default == inspect.Parameter.empty))
-                else:
-                    param_obj = Parameter(type='object', required=(p_val.default == inspect.Parameter.empty))
-                params[p_name] = param_obj
+                hint = type_hints.get(p_name, None)
+                params[p_name] = python_type_to_parameters(hint, p_val.default)
 
             action_name = ''.join(word.capitalize() for word in re.split(r'[_\-]', name))
             self.add_action(
                 name=action_name,
                 description=func.__doc__ or "",
                 parameters=params,
-                result=Parameter(type=python_type_to_json_type(return_type)),
+                result=python_type_to_parameters(return_type),
                 callback=getattr(self, name),
             )
-
-    @classmethod
-    def action(cls, func: Callable):
-        func._is_action = True
-        cls._registered_actions[func.__name__] = func
-        return func
 
     def get_action(self, name: str):
         """
