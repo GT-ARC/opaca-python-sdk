@@ -4,7 +4,8 @@ from typing import Dict, List, Any, Optional, Callable, get_type_hints
 import uuid
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
-from .utils import http_error, python_type_to_parameters
+from .utils import http_error
+from .decorators import register_actions, register_streams
 
 
 class AbstractAgent:
@@ -16,85 +17,8 @@ class AbstractAgent:
         self.actions: Dict[str, Dict[str, Any]] = {}
         self.streams: Dict[str, Dict[str, Any]] = {}
         self.messages: List[Message] = []
-        self.register_actions()
-        self.register_streams()
-
-    @classmethod
-    def action(cls, _func: Optional[Callable] = None, *, name: str = '', description: str = ''):
-        def decorator(func: Callable):
-            func._is_action = True
-            func._name = name
-            func._description = description
-            return func
-        return decorator(_func) if _func else decorator
-
-    @classmethod
-    def stream(cls, *, mode: StreamDescription.Mode, name: str = '', description: str = ''):
-        def decorator(func: Callable):
-            func._is_stream = True
-            func._mode = mode
-            func._name = name
-            func._description = description
-            return func
-        return decorator
-
-    def register_actions(self):
-        # Auto-Register actions marked by decorator
-        for name, func in inspect.getmembers(self, predicate=inspect.ismethod):
-            if not getattr(func, '_is_action', False):
-                continue
-
-            # Get method information
-            sig = inspect.signature(func)
-            type_hints = get_type_hints(func)
-            params = {}
-            return_type = type_hints.get('return', None)
-
-            # Get Parameter class from type hint
-            for p_name, p_val in sig.parameters.items():
-                if p_name == 'self':
-                    continue
-                hint = type_hints.get(p_name, None)
-                params[p_name] = python_type_to_parameters(hint, p_val.default)
-
-            # Get either passed name and description or use default
-            action_name = getattr(func, '_name', '')
-            if not action_name:
-                action_name = ''.join(word.capitalize() for word in re.split(r'[_\-]', name))
-            description = getattr(func, '_description', '')
-            if not description and func.__doc__:
-                description = func.__doc__.strip()
-
-            # Add action to agent instance
-            self.add_action(
-                name=action_name,
-                description=description,
-                parameters=params,
-                result=python_type_to_parameters(return_type),
-                callback=getattr(self, name),
-            )
-
-    def register_streams(self):
-        # Auto-Register actions marked by decorator
-        for name, func in inspect.getmembers(self, predicate=inspect.ismethod):
-            if not getattr(func, '_is_stream', False):
-                continue
-
-            stream_name = getattr(func, '_name', '')
-            if not stream_name:
-                stream_name = ''.join(word.capitalize() for word in re.split(r'[_\-]', name))
-            description = getattr(func, '_description', '')
-            if not description and func.__doc__:
-                description = func.__doc__.strip()
-            mode = getattr(func, '_mode', '')
-
-            self.add_stream(
-                name=stream_name,
-                description=description,
-                mode=mode,
-                callback=getattr(self, name),
-            )
-
+        register_actions(self)
+        register_streams(self)
 
     def get_action(self, name: str):
         """

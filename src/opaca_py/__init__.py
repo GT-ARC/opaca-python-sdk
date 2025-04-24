@@ -1,4 +1,1 @@
-from .abstract_agent import AbstractAgent
-
-action = AbstractAgent.action
-stream = AbstractAgent.stream
+from .decorators import action, stream
