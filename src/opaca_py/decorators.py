@@ -3,7 +3,7 @@ import re
 from typing import Optional, Callable, get_type_hints, Dict, Tuple
 
 from .models import StreamDescription, Parameter
-from .utils import python_type_to_parameters
+from .utils import python_type_to_parameter
 
 
 def action(_func: Optional[Callable] = None, *, name: str = '', description: str = ''):
@@ -79,9 +79,9 @@ def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
         if p_name == 'self':
             continue
         hint = type_hints.get(p_name, None)
-        params[p_name] = python_type_to_parameters(hint, p_val.default)
+        params[p_name] = python_type_to_parameter(hint, p_val.default)
     return_type = type_hints.get('return', None)
-    return_type = python_type_to_parameters(return_type)
+    return_type = python_type_to_parameter(return_type)
     return params, return_type
 
 
