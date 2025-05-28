@@ -1,5 +1,6 @@
 from time import sleep
 
+from opaca_py import action, stream
 from opaca_py.abstract_agent import AbstractAgent
 from opaca_py.models import Message, StreamDescription, Parameter
 
@@ -19,27 +20,6 @@ class SampleAgent(AbstractAgent):
             result=Parameter(type='string'),
             callback=self.sample_action
         )
-        self.add_action(
-            name='Add',
-            description='Adds the two numbers and returns the result.',
-            parameters={'x': Parameter(type='integer'), 'y': Parameter(type='integer')},
-            result=Parameter(type='integer'),
-            callback=self.add
-        )
-        self.add_action(
-            name='TimeConsumingAction',
-            description='Returns the given text after waiting for the given time + 1 in seconds.',
-            parameters={'text': Parameter(type='string'), 'sleep_time': Parameter(type='integer')},
-            result=Parameter(type='string'),
-            callback=self.time_consuming_action
-        )
-        self.add_action(
-            name='Concatenate',
-            description='Concatenates the given array to a string and returns the result.',
-            parameters={'array': Parameter.list_of('string'), 'separator': Parameter(type='string', required=False)},
-            result=Parameter(type='string'),
-            callback=self.concatenate
-        )
         self.add_stream(
             name='SampleStream',
             description='Returns a sample stream value.',
@@ -48,23 +28,45 @@ class SampleAgent(AbstractAgent):
         )
 
     def sample_action(self, param1: str, param2: int) -> str:
+        """
+        Returns a simple string acknowledging the action\'s execution with the given parameters.
+        """
         return f'{self.agent_id} executed sampleAction1 with params: {param1}, {param2}'
 
+    @action
     def add(self, x: int, y: int) -> int:
+        """
+        Adds the two numbers and returns the result.
+        """
         print(f'{self.agent_id} executed add with params: {x}, {y}')
         return x + y
 
+    @action
     def time_consuming_action(self, text: str, sleep_time: int = 0) -> str:
+        """
+        Returns the given text after waiting for the given time + 1 in seconds.
+        """
         sleep_time = int(sleep_time)
         print(f'{self.agent_id} executing time_consuming action, taking approx {1 + sleep_time} seconds')
         sleep(1 + sleep_time)
         return text
 
+    @action(name='ConcatenateArray', description='Concatenates the given array to a string and returns the result.')
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
         print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
         return separator.join(array)
 
     async def sample_stream(self):
+        """
+        Returns a sample stream value.
+        """
+        yield b'sampleStream data'
+
+    @stream(mode=StreamDescription.Mode.GET)
+    async def sample_stream_deco(self):
+        """
+        Returns a sample stream value.
+        """
         yield b'sampleStream data'
 
     def receive_message(self, message: Message):

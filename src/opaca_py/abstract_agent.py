@@ -3,6 +3,7 @@ import uuid
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
 from .utils import http_error
+from .decorators import register_actions, register_streams
 
 
 class AbstractAgent:
@@ -14,6 +15,8 @@ class AbstractAgent:
         self.actions: Dict[str, Dict[str, Any]] = {}
         self.streams: Dict[str, Dict[str, Any]] = {}
         self.messages: List[Message] = []
+        register_actions(self)
+        register_streams(self)
 
     def get_action(self, name: str):
         """
