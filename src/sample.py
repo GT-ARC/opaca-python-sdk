@@ -2,7 +2,7 @@ from time import sleep
 
 from opaca_py import action, stream
 from opaca_py.abstract_agent import AbstractAgent
-from opaca_py.models import Message, StreamDescription
+from opaca_py.models import Message, StreamDescription, Parameter
 
 
 class SampleAgent(AbstractAgent):
@@ -13,8 +13,20 @@ class SampleAgent(AbstractAgent):
 
     def __init__(self, **kwargs):
         super(SampleAgent, self).__init__(**kwargs)
+        self.add_action(
+            name='SampleAction',
+            description='Returns a simple string acknowledging the action\'s execution with the given parameters.',
+            parameters={'param1': Parameter(type='string'), 'param2': Parameter(type='integer')},
+            result=Parameter(type='string'),
+            callback=self.sample_action
+        )
+        self.add_stream(
+            name='SampleStream',
+            description='Returns a sample stream value.',
+            mode=StreamDescription.Mode.GET,
+            callback=self.sample_stream
+        )
 
-    @action
     def sample_action(self, param1: str, param2: int) -> str:
         """
         Returns a simple string acknowledging the action\'s execution with the given parameters.
@@ -39,16 +51,19 @@ class SampleAgent(AbstractAgent):
         sleep(1 + sleep_time)
         return text
 
-    @action
+    @action(name='ConcatenateArray', description='Concatenates the given array to a string and returns the result.')
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
-        """
-        Concatenates the given array to a string and returns the result.
-        """
         print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
         return separator.join(array)
 
-    @stream(mode=StreamDescription.Mode.GET)
     async def sample_stream(self):
+        """
+        Returns a sample stream value.
+        """
+        yield b'sampleStream data'
+
+    @stream(mode=StreamDescription.Mode.GET)
+    async def sample_stream_deco(self):
         """
         Returns a sample stream value.
         """
