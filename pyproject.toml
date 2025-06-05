@@ -12,7 +12,7 @@ authors = [
     {name="Robert Karsten Strehlow", email="robert.strehlow@gt-arc.com"}
 ]
 readme = "README.md"
-license = "MIT"
+license = "LicenseRef-OPACA"
 license-files = ["LICEN[CS]E"]
 requires-python = ">=3.10"
 dependencies = [
