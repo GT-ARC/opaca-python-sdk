@@ -1,5 +1,5 @@
-from opaca_py.container import Container
-from opaca_py.routes import create_routes
+from opaca.container import Container
+from opaca.routes import create_routes
 
 from sample import SampleAgent
 
