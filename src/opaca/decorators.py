@@ -152,23 +152,19 @@ def resolve_array_items(hint: Any) -> Parameter.ArrayItems:
     """
     Recursive function to resolve array items.
     """
-    origin = get_origin(hint)
+    origin = get_origin(hint) or hint
     args = get_args(hint)
 
     if origin in {list, tuple} and args:
         inner = args[0]
-        if inspect.isclass(inner):
-            return Parameter.ArrayItems(
-                type=inner.__name__,
-            )
-        if get_origin(inner) in {list, tuple}:
+        if (get_origin(inner) or inner) in {list, tuple}:
             return Parameter.ArrayItems(
                 type="array",
                 items=resolve_array_items(inner),
             )
-        return Parameter.ArrayItems(type=type_mapping[inner])
+        return Parameter.ArrayItems(type=type_mapping.get(inner, inner.__name__))
     else:
-        return Parameter.ArrayItems(type=type_mapping[hint])
+        return Parameter.ArrayItems(type=type_mapping.get(hint, hint.__name__))
 
 
 def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) -> Any:
@@ -176,7 +172,7 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
     This method takes in parameter information and transforms it into a Parameter instance.
     Supports nested parameter types and custom objects.
     """
-    origin = get_origin(hint)
+    origin = get_origin(hint) or hint
     args = get_args(hint)
 
     required = default is inspect.Parameter.empty
@@ -198,10 +194,7 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
 
     else:
         # Use the custom object name if the hint is a class, otherwise use standard type names
-        if inspect.isclass(hint):
-            _type = hint.__name__
-        else:
-            _type = type_mapping[origin]
+        _type = type_mapping.get(origin, hint.__name__)
 
     return Parameter(
         type=_type,
