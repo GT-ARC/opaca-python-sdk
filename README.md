@@ -4,6 +4,11 @@ This module provides an implementation of the OPACA API in Python, using FastAPI
 The 'agents' in this module are not 'real' agents in the sense that they run in their own thread, but just objects that
 react to the REST routes.
 
+## Installation
+
+This module has been deployed to PyPI (see https://pypi.org/project/opaca/), so in order to use it, you can just
+`pip install opaca` and then `import opaca` into your project.
+
 ## Developing new Agents
 
 An example for how to develop new agents using this module can be found in `sample.py`.
