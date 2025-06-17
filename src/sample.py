@@ -1,8 +1,8 @@
 from time import sleep
 
-from opaca_py import action, stream
-from opaca_py.abstract_agent import AbstractAgent
-from opaca_py.models import Message, StreamDescription, Parameter
+from opaca import action, stream
+from opaca.abstract_agent import AbstractAgent
+from opaca.models import Message, StreamDescription, Parameter
 
 
 class SampleAgent(AbstractAgent):

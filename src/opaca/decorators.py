@@ -115,27 +115,56 @@ type_mapping = {
 }
 
 
+type_priority = {
+    "null": 0,
+    "boolean": 1,
+    "integer": 2,
+    "number": 3,
+    "string": 4,
+    "array": 5,
+    "object": 6,
+}
+
+
+def merge_json_types(types: list[str]) -> str:
+    """
+    If more than one parameter type was given for a single parameter (e.g. with Union),
+    decide which single parameter type would fit best, based on the type priority above.
+    """
+    if len(types) == 1:
+        return types[0]
+
+    # Handle int + float = number
+    if "integer" in types and "number" in types:
+        types = [t for t in types if t != "integer"]
+
+    # Choose the highest precedence type
+    best_type = max(types, key=lambda t: type_priority.get(t, -1))
+
+    # If any types are incompatible, raise error
+    if len(types) > 1 and best_type not in {"number", "array", "object"}:
+        raise TypeError(f'Cannot merge types {types} into one JSON schema type')
+
+    return best_type
+
+
 def resolve_array_items(hint: Any) -> Parameter.ArrayItems:
     """
     Recursive function to resolve array items.
     """
-    origin = get_origin(hint)
+    origin = get_origin(hint) or hint
     args = get_args(hint)
 
     if origin in {list, tuple} and args:
         inner = args[0]
-        if inspect.isclass(inner):
-            return Parameter.ArrayItems(
-                type=inner.__name__,
-            )
-        if get_origin(inner) in {list, tuple}:
+        if (get_origin(inner) or inner) in {list, tuple}:
             return Parameter.ArrayItems(
                 type="array",
                 items=resolve_array_items(inner),
             )
-        return Parameter.ArrayItems(type=type_mapping[inner])
+        return Parameter.ArrayItems(type=type_mapping.get(inner, inner.__name__))
     else:
-        return Parameter.ArrayItems(type=type_mapping[hint])
+        return Parameter.ArrayItems(type=type_mapping.get(hint, hint.__name__))
 
 
 def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) -> Any:
@@ -143,25 +172,30 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
     This method takes in parameter information and transforms it into a Parameter instance.
     Supports nested parameter types and custom objects.
     """
-    origin = get_origin(hint)
+    origin = get_origin(hint) or hint
     args = get_args(hint)
 
     required = default is inspect.Parameter.empty
 
-    # Handle Union types with none or Optionals (Optional[str] == Union[str, None])
-    if origin is Union and type(None) in args:
-        required = False
-        # Remove NoneType from the args
-        args = [arg for arg in args if arg is not type(None)]
-        hint = args[0] if args else Any
+    # Handle Union types with None or Optionals (Optional[str] == Union[str, None])
+    if origin is Union:
+        types = []
+        for arg in args:
+            if arg is type(None):
+                required = False
+            else:
+                t = type_mapping.get(arg, "object")
+                types.append(t)
 
-    # Use the custom object name if the hint is a class, otherwise use standard type names
-    if inspect.isclass(hint):
-        _type = hint.__name__
+        try:
+            _type = merge_json_types(types)
+        except TypeError as e:
+            raise ValueError(f'Unsupported Union types {args}: {e}')
+
     else:
-        _type = type_mapping[origin]
+        # Use the custom object name if the hint is a class, otherwise use standard type names
+        _type = type_mapping.get(origin, hint.__name__)
 
-    # Handle base types
     return Parameter(
         type=_type,
         required=required,

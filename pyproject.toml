@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opaca"
+version = "0.0.2"
+description = "Provides helpful tools for building your own OPACA Agent Container."
+authors = [
+    {name="Oskar Felix Kupke", email="oskarfelix.kupke@gt-arc.com"},
+    {name="Tobias Küster", email="tobias.kuester@gt-arc.com"},
+    {name="Robert Karsten Strehlow", email="robert.strehlow@gt-arc.com"}
+]
+readme = "README.md"
+license = "LicenseRef-OPACA"
+license-files = ["LICEN[CS]E"]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic~=2.7.4",
+    "fastapi~=0.111.0",
+    "uvicorn[standard]==0.30.1",
+    "starlette~=0.37.2"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
