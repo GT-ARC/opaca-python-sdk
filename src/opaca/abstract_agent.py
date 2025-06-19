@@ -1,4 +1,5 @@
 from typing import Dict, List, Any, Optional, Callable
+from inspect import getdoc
 import uuid
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
@@ -8,9 +9,10 @@ from .decorators import register_actions, register_streams
 
 class AbstractAgent:
 
-    def __init__(self, agent_id: str = '', agent_type: str = '', container: Optional['Container'] = None):
+    def __init__(self, agent_id: str = '', agent_type: str = '', description: Optional[str] = None, container: Optional['Container'] = None):
         self.agent_id: str = agent_id if agent_id else str(uuid.uuid4())
-        self.agent_type: str = agent_type
+        self.agent_type: str = agent_type or self.__class__.__name__
+        self.description: str = description or getdoc(self.__class__)
         self.container: Optional['Container'] = container
         self.actions: Dict[str, Dict[str, Any]] = {}
         self.streams: Dict[str, Dict[str, Any]] = {}
@@ -134,6 +136,7 @@ class AbstractAgent:
         return AgentDescription(
             agentId=self.agent_id,
             agentType=self.agent_type,
+            description=self.description,
             actions=[self.make_action_description(action_name) for action_name in self.actions],
             streams=[self.make_stream_description(stream_name) for stream_name in self.streams]
         )
