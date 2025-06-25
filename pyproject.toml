@@ -22,5 +22,8 @@ dependencies = [
     "starlette~=0.37.2"
 ]
 
+[project.urls]
+Repository = "https://github.com/GT-ARC/opaca-python-sdk"
+
 [tool.setuptools.packages.find]
 where = ["src"]

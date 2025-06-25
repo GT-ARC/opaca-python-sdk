@@ -6,7 +6,7 @@ from sample import SampleAgent
 
 # assemble Agent Container
 container = Container("resources/container.json")
-agent1 = SampleAgent(agent_id='sampleAgent1', agent_type='type1')
+agent1 = SampleAgent(agent_id='sampleAgent1')
 container.add_agent(agent1)
 agent1.subscribe_channel('test_channel')
 

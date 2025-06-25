@@ -53,6 +53,7 @@ class ImageParameter(BaseModel):
 class AgentDescription(BaseModel):
     agentId: str
     agentType: str
+    description: Optional[str] = None
     actions: List[ActionDescription] = []
     streams: List[StreamDescription] = []
 
