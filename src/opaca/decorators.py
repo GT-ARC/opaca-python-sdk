@@ -77,6 +77,9 @@ def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
     for p_name, p_val in sig.parameters.items():
         if p_name == 'self':
             continue
+        if p_val.annotation is inspect.Parameter.empty:
+            raise TypeError(f"Parameter {p_name} in function {func.__name__} is missing a type annotation, "
+                            f"which is required for the decorator to work.")
         hint = type_hints.get(p_name, None)
         params[p_name] = python_type_to_parameter(hint, p_val.default)
     return_type = type_hints.get('return', None)
@@ -162,9 +165,9 @@ def resolve_array_items(hint: Any) -> Parameter.ArrayItems:
                 type="array",
                 items=resolve_array_items(inner),
             )
-        return Parameter.ArrayItems(type=type_mapping.get(inner, inner.__name__))
+        return Parameter.ArrayItems(type=type_mapping.get(get_origin(inner) or inner, inner.__name__))
     else:
-        return Parameter.ArrayItems(type=type_mapping.get(hint, hint.__name__))
+        return Parameter.ArrayItems(type=type_mapping.get(origin, hint.__name__))
 
 
 def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) -> Any:
