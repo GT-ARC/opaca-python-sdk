@@ -1,3 +1,5 @@
+import ast
+import textwrap
 import inspect
 import re
 from typing import Optional, Callable, get_type_hints, Dict, Tuple, Any, Union, get_origin, get_args
@@ -67,6 +69,28 @@ def register_streams(agent):
         )
 
 
+def function_returns_value(func: Callable) -> bool:
+    """
+    Returns True if the function has any non-None return statements.
+    """
+    source = inspect.getsource(func)
+    source = textwrap.dedent(source)
+    tree = ast.parse(source)
+
+    class ReturnVisitor(ast.NodeVisitor):
+        def __init__(self):
+            self.return_value = False
+
+        def visit_Return(self, node: ast.Return):
+            if node.value is not None:
+                if not (isinstance(node.value, ast.Constant) and node.value.value is None):
+                    self.return_value = True
+
+    visitor = ReturnVisitor()
+    visitor.visit(tree)
+    return visitor.return_value
+
+
 def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
     """
     Parse the decorated function's parameters and return type into proper OPACA model types.
@@ -74,6 +98,8 @@ def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
     params = {}
     sig = inspect.signature(func)
     type_hints = get_type_hints(func)
+
+    # Transform parameter type hints
     for p_name, p_val in sig.parameters.items():
         if p_name == 'self':
             continue
@@ -82,8 +108,17 @@ def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
                             f"which is required for the decorator to work.")
         hint = type_hints.get(p_name, None)
         params[p_name] = python_type_to_parameter(hint, p_val.default)
-    return_type = type_hints.get('return', None)
-    return_type = python_type_to_parameter(return_type)
+
+    # Check return type
+    if sig.return_annotation is not inspect.Parameter.empty:
+        return_type = type_hints.get('return', None)
+        return_type = python_type_to_parameter(return_type)
+    elif function_returns_value(func):
+        # Raise error if function returns anything but no return type is provided
+        raise TypeError(f'Function {func.__name__} has non-None return statements but missing a return type annotation')
+    else:
+        return_type = python_type_to_parameter(None)
+
     return params, return_type
 
 
@@ -180,8 +215,11 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
 
     required = default is inspect.Parameter.empty
 
+    # Handle NoneType
+    if hint is None:
+        _type = "null"
     # Handle Union types with None or Optionals (Optional[str] == Union[str, None])
-    if origin is Union:
+    elif origin is Union:
         types = []
         for arg in args:
             if arg is type(None):
@@ -194,7 +232,6 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
             _type = merge_json_types(types)
         except TypeError as e:
             raise ValueError(f'Unsupported Union types {args}: {e}')
-
     else:
         # Use the custom object name if the hint is a class, otherwise use standard type names
         _type = type_mapping.get(origin, hint.__name__)
