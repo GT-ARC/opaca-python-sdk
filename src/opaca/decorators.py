@@ -104,8 +104,8 @@ def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
         if p_name == 'self':
             continue
         if p_val.annotation is inspect.Parameter.empty:
-            raise TypeError(f"Parameter {p_name} in function {func.__name__} is missing a type annotation, "
-                            f"which is required for the decorator to work.")
+            raise TypeError(f'Parameter "{p_name}" in function "{func.__name__}" is missing a type annotation, '
+                            f'which is required for the decorator to work')
         hint = type_hints.get(p_name, None)
         params[p_name] = python_type_to_parameter(hint, p_val.default)
 
@@ -115,7 +115,7 @@ def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
         return_type = python_type_to_parameter(return_type)
     elif function_returns_value(func):
         # Raise error if function returns anything but no return type is provided
-        raise TypeError(f'Function {func.__name__} has non-None return statements but missing a return type annotation')
+        raise TypeError(f'Function "{func.__name__}" has non-None return statements but missing a return type annotation')
     else:
         return_type = python_type_to_parameter(None)
 
