@@ -13,8 +13,6 @@ All changes to the opaca package will be documented in this file.
  
 ### Fixed
 
-- Fixed an issue with incorrect parameter type mapping for native python types.
-
 ## [0.0.2] - 2025-06-10
  
 ### Added
