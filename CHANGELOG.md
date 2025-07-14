@@ -2,6 +2,20 @@
 
 All changes to the opaca package will be documented in this file.
 
+## [0.0.4] - not released yet
+
+### Added
+
+- Raise an error when a decorated function with parameters has no type hints
+- Raise an error for missing return type annotations when function returns non-None type
+
+### Changed
+
+### Fixed
+
+- Fixed a bug for type hints in decorators for nested types in List
+- Fixed a bug for NoneType mapping to type "null"
+
 ## [0.0.3] - 2025-06-25
  
 ### Added
