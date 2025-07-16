@@ -2,9 +2,13 @@ import ast
 import textwrap
 import inspect
 import re
-from typing import Optional, Callable, get_type_hints, Dict, Tuple, Any, Union, get_origin, get_args
+from typing import (Optional, Callable, get_type_hints, Dict,
+                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING)
 
 from .models import StreamDescription, Parameter
+
+if TYPE_CHECKING:
+    from .abstract_agent import AbstractAgent
 
 
 def action(_func: Optional[Callable] = None, *, name: str = '', description: str = ''):
@@ -28,7 +32,7 @@ def stream(*, mode: StreamDescription.Mode, name: str = '', description: str = '
     return decorator
 
 
-def register_actions(agent):
+def register_actions(agent: 'AbstractAgent') -> None:
     """
     Auto-register actions marked by decorator.
     """
@@ -49,7 +53,7 @@ def register_actions(agent):
         )
 
 
-def register_streams(agent):
+def register_streams(agent: 'AbstractAgent') -> None:
     """
     Auto-register streams marked by decorator.
     """

@@ -1,19 +1,20 @@
+import os
 from datetime import datetime
 from typing import Dict, List, Any
 import json
 
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription
-from .utils import http_error, get_env_var
+from .utils import http_error
 
 
 class Container:
 
     def __init__(self, path_to_image_file: str):
-        self.container_id = get_env_var('CONTAINER_ID', '')
-        self.platform_url = get_env_var('PLATFORM_URL', '')
-        self.token = get_env_var('TOKEN', '')
-        self.owner = get_env_var('OWNER', '')
+        self.container_id = os.getenv('CONTAINER_ID', '')
+        self.platform_url = os.getenv('PLATFORM_URL', '')
+        self.token = os.getenv('TOKEN', '')
+        self.owner = os.getenv('OWNER', '')
 
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
@@ -148,6 +149,6 @@ class Container:
         return f'{self.started_at.isoformat(timespec="milliseconds")}Z'
 
     def get_arguments(self, include_confidential: bool = True) -> Dict[str, str]:
-        return { param.name: get_env_var(param.name, param.defaultValue)
+        return { param.name: os.getenv(param.name, param.defaultValue)
                  for param in self.image.parameters
                  if include_confidential or not param.confidential }
