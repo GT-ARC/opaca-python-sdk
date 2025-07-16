@@ -1,21 +1,13 @@
-from opaca.container import Container
-from opaca.routes import create_routes
-
+import opaca
+from opaca import Container
 from sample import SampleAgent
 
 
-# assemble Agent Container
-container = Container("resources/container.json")
-agent1 = SampleAgent(agent_id='sampleAgent1')
-container.add_agent(agent1)
+# Assemble Agent Container
+container = Container('resources/container.json')
+agent1 = SampleAgent(container=container, agent_id='sampleAgent1')
 agent1.subscribe_channel('test_channel')
 
-# Create App
-app = create_routes("sample-container", container)
 
-
-if __name__ == "__main__":
-    # start app (alternatively, start with `uvicorn` from command line)
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=container.image.apiPort)
+if __name__ == '__main__':
+    opaca.run(container)
