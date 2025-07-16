@@ -53,6 +53,8 @@ class Container:
         Remove the agent from the container.
         """
         if self.has_agent(agent_id):
+            agent = self.agents[agent_id]
+            agent.container = None
             del self.agents[agent_id]
 
     def has_agent(self, agent_id) -> bool:

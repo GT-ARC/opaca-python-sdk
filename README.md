@@ -12,14 +12,14 @@ This module has been deployed to PyPI (see https://pypi.org/project/opaca/), so 
 ## Developing new Agents
 
 An example for how to develop new agents using this module can be found in `sample.py`.
-The most important take-aways are:
-* All agent classes should extend the `AbstractAgent` class.
-* In the constructor `__init__`, you can register actions the agents can perform using the `add_action()` method from the super-class. 
+The most important takeaways are:
+* All agent classes should extend the `AbstractAgent` class. Make sure to pass a `Container` object to the agent.
+* In the agent's constructor `__init__`, you can register actions the agents can perform using the `add_action()` method from the super-class. 
 * Alternatively, you can expose actions by using the `@action` decorator on a method.
 * Similarly, stream responses can be defined using the `@stream` decorator or the `add_stream()` method in the constructor `__init__`.
 * Decorators will use the method name as the action name in PascalCase, the docstring as description, and use type hints to determine the input and output parameter types.
 * When registering actions or streams, you can manually specify their name and description by using the `name` and `description` field within the parameter, e.g. `@action(name="MyAction", description="My description")`.
-* Methods declared as streams should return some iterator using the `yield` keyword.
+* Methods declared as streams should return some iterator, e.g. by using the `yield` keyword on an iterable.
 * Messages from the `/send`  and `/broadcast` routes can be received by overriding the `receive_message()` method.
 
 
