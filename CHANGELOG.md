@@ -8,8 +8,11 @@ All changes to the opaca package will be documented in this file.
 
 - Raise an error when a decorated function with parameters has no type hints
 - Raise an error for missing return type annotations when function returns non-None type
+- New `opaca.run(container)` method to quickly and easily start the container without hassle.
 
 ### Changed
+
+- Each `AbstractAgent` now needs to be passed a `Container` on creation that it is immediately added to.
 
 ### Fixed
 
