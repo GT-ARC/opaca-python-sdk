@@ -9,10 +9,7 @@ from .decorators import register_actions, register_streams
 
 class AbstractAgent:
 
-    def __init__(self, container: 'Container' = None, agent_id: str = '', agent_type: str = '', description: Optional[str] = None):
-        if container is None:
-            raise ValueError('Container must be defined.')
-
+    def __init__(self, container: 'Container', agent_id: str = '', agent_type: str = '', description: Optional[str] = None):
         self.container: 'Container' = container
         self.agent_id: str = agent_id if agent_id else str(uuid.uuid4())
         self.agent_type: str = agent_type or self.__class__.__name__

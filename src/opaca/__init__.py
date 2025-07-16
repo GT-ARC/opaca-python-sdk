@@ -11,8 +11,8 @@ from .models import (Parameter,
                      Message)
 
 
-def run(title: str,
-        container: Container,
+def run(container: Container,
+        title: str | None = None,
         host: str | None = None,
         port: int | None = None,
         app: _FastAPI | None = None,
@@ -20,13 +20,16 @@ def run(title: str,
     """
     Run the container with uvicorn.
 
-    :param title: The title of the application.
     :param container: The agent container to run the application with.
+    :param title: The title of the application. Defaults to the image name specified in the container image.
     :param host: The hostname to run the application on. Defaults to '0.0.0.0'.
     :param port: The port to run the application on. Defaults to the apiPort specified in the container image.
     :param app: The FastAPI object with the routes. If this is provided,
     the title argument becomes irrelevant. Defaults to the standard OPACA routes.
     """
+    if title is None:
+        title = container.image.imageName
+
     if host is None:
         host = '0.0.0.0'
 
