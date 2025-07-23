@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc
 import uuid
 
@@ -6,6 +6,8 @@ from .models import AgentDescription, ActionDescription, Message, StreamDescript
 from .utils import http_error
 from .decorators import register_actions, register_streams
 
+if TYPE_CHECKING:
+    from .container import Container
 
 class AbstractAgent:
 
