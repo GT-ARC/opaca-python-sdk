@@ -103,10 +103,13 @@ def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
     sig = inspect.signature(func)
     type_hints = get_type_hints(func)
 
+    print(f'In function: {func.__name__}')
+
     # Transform parameter type hints
     for p_name, p_val in sig.parameters.items():
         if p_name == 'self':
             continue
+        print(f'parameter_name: {p_name}')
         if p_val.annotation is inspect.Parameter.empty:
             raise TypeError(f'Parameter "{p_name}" in function "{func.__name__}" is missing a type annotation, '
                             f'which is required for the decorator to work')
@@ -229,9 +232,14 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
             if arg is type(None):
                 required = False
             else:
-                t = type_mapping.get(arg, "object")
+                t = type_mapping.get(get_origin(arg), "object")
                 types.append(t)
 
+            # If Union includes an array for further deserialization,
+            # overwrite the current "Union" hint with the list/tuple hint
+            # This has probably some weird side effects for nested Unions/Optionals
+            if get_origin(arg) in {list, tuple}:
+                hint = arg
         try:
             _type = merge_json_types(types)
         except TypeError as e:
