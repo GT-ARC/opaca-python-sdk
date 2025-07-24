@@ -142,7 +142,7 @@ def parse_description(func: Callable) -> str:
     """
     description = getattr(func, '_description', '')
     if not description and func.__doc__:
-        description = func.__doc__.strip()
+        description = inspect.getdoc(func)
     return description
 
 
