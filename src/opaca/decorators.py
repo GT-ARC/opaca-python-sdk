@@ -103,13 +103,10 @@ def parse_params(func: Callable) -> Tuple[Dict[str, Parameter], Parameter]:
     sig = inspect.signature(func)
     type_hints = get_type_hints(func)
 
-    print(f'In function: {func.__name__}')
-
     # Transform parameter type hints
     for p_name, p_val in sig.parameters.items():
         if p_name == 'self':
             continue
-        print(f'parameter_name: {p_name}')
         if p_val.annotation is inspect.Parameter.empty:
             raise TypeError(f'Parameter "{p_name}" in function "{func.__name__}" is missing a type annotation, '
                             f'which is required for the decorator to work')

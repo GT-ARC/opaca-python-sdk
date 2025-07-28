@@ -2,7 +2,17 @@
 
 All changes to the opaca package will be documented in this file.
 
-## [0.0.4] - not released yet
+## [0.0.5] - 
+
+### Added
+
+### Changed
+
+### Fixed
+
+- List type hints in `Optional` or `Union` are now correctly resolved.
+
+## [0.0.4] - 2025-07-23
 
 ### Added
 
