@@ -1,5 +1,5 @@
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
-from inspect import getdoc
+from inspect import getdoc, iscoroutinefunction
 import uuid
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
@@ -58,14 +58,20 @@ class AbstractAgent:
         if self.knows_action(name):
             del self.actions[name]
 
-    def invoke_action(self, name: str, parameters: Dict[str, Any]) -> Optional[Any]:
+    async def invoke_action(self, name: str, parameters: Dict[str, Any]) -> Optional[Any]:
         """
         Invoke action on this agent.
         """
         if not self.knows_action(name):
             raise http_error(400, f'Unknown action: {name}.')
         try:
-            return self.get_action(name)['callback'](**parameters)
+            action = self.get_action(name)
+            callback = action['callback']
+
+            if iscoroutinefunction(callback):
+                return await callback(**parameters)
+            else:
+                return callback(**parameters)
         except TypeError:
             msg = f'Invalid action parameters. Provided: {parameters}, Required: {self.get_action(name)["parameters"]}'
             raise http_error(400, msg)

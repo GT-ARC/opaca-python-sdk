@@ -55,19 +55,19 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/invoke/{action}', response_model=Any)
-    def invoke_action(action: str, parameters: Dict[str, Any]):
+    async def invoke_action(action: str, parameters: Dict[str, Any]):
         """
         Invoke the specified action on any agent that knows the action.
         """
-        return container.invoke_action(action, parameters)
+        return await container.invoke_action(action, parameters)
 
 
     @app.post('/invoke/{action}/{agentId}', response_model=Any)
-    def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any]):
+    async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any]):
         """
         Invoke an action on a specific agent.
         """
-        return container.invoke_agent_action(action, agentId, parameters)
+        return await container.invoke_agent_action(action, agentId, parameters)
 
 
     @app.get('/stream/{stream}', response_class=StreamingResponse)
