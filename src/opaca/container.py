@@ -61,21 +61,21 @@ class Container:
     def has_agent(self, agent_id) -> bool:
         return agent_id in self.agents
 
-    def invoke_action(self, name: str, parameters: Dict[str, Any]) -> str:
+    async def invoke_action(self, name: str, parameters: Dict[str, Any]) -> str:
         """
         Invoke action on any agent that knows the action.
         """
         for agent in self.agents.values():
             if agent.knows_action(name):
-                return agent.invoke_action(name, parameters)
+                return await agent.invoke_action(name, parameters)
         raise http_error(400, f'Unknown action: {name}.')
 
-    def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any]):
+    async def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any]):
         """
         Invoke action on the specified agent.
         """
         if self.has_agent(agent_id):
-            return self.get_agent(agent_id).invoke_action(name, parameters)
+            return await self.get_agent(agent_id).invoke_action(name, parameters)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
     def invoke_stream(self, name: str, mode: StreamDescription.Mode):
