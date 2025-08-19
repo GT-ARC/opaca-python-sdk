@@ -15,7 +15,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
     app = FastAPI(debug=True, title=title)
 
     @app.get('/info', response_model=ContainerDescription)
-    def get_container_info() -> ContainerDescription:
+    async def get_container_info() -> ContainerDescription:
         """
         Get a description of the container.
         """
@@ -23,7 +23,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.get('/agents', response_model=List[AgentDescription])
-    def get_all_agents() -> List[AgentDescription]:
+    async def get_all_agents() -> List[AgentDescription]:
         """
         Get a list of all agents and their corresponding actions.
         """
@@ -31,7 +31,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.get('/agents/{agentId}', response_model=AgentDescription)
-    def get_agent(agentId: str) -> AgentDescription:
+    async def get_agent(agentId: str) -> AgentDescription:
         """
         Returns the agent with the passed agentId.
         """
@@ -39,7 +39,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/send/{agentId}')
-    def send_message(agentId: str, message: Message):
+    async def send_message(agentId: str, message: Message):
         """
         Send a message to the specified agent.
         """
@@ -47,7 +47,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/broadcast/{channel}')
-    def broadcast(channel: str, message: Message):
+    async def broadcast(channel: str, message: Message):
         """
         Broadcast a message to all agents that listen on the channel.
         """
@@ -79,7 +79,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
-    def get_agent_stream(stream: str, agent_id: str):
+    async def get_agent_stream(stream: str, agent_id: str):
         """
         GET a stream from the specified agent.
         """
