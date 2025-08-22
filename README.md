@@ -161,6 +161,51 @@ In the `resources/container.json` file:
 }
 ```
 
+## Passing Environment Variables
+
+You can pass environment variables to your agent container by declaring them in the `resources/container.json` file and then passing the actual values during the container deployment via the `POST /containers` endpoint.
+
+Here is an example for an environment variable `MY_API_KEY`:
+
+In your `resources/container.json` file:
+
+```
+{
+  "imageName": "<your-container-name>,
+  "parameters": [
+    {
+        "name": "MY_API_KEY",
+        "type": "string",
+        "required": true,
+        "confidential": true,
+        "defaultValue": null
+    }
+  ]
+}
+```
+
+During the container deployment, your request body would then look like this:
+
+```
+{
+  "image": {
+    "imageName": "<your-container-name>,
+    "parameters": [
+      {
+        "name": "MY_API_KEY",
+        "type": "string",
+        "required": true,
+        "confidential": true,
+        "defaultValue": null
+      }
+    ]
+  },
+  "arguments": {
+    "MY_API_KEY": "<your-api-key>"
+  }
+}
+```
+
 ## Additional Information
 
 * All agent classes should extend the `AbstractAgent` class. Make sure to pass a `Container` object to the agent.
