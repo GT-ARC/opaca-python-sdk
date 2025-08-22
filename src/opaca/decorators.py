@@ -229,9 +229,14 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
             if arg is type(None):
                 required = False
             else:
-                t = type_mapping.get(arg, "object")
+                t = type_mapping.get(get_origin(arg), "object")
                 types.append(t)
 
+            # If Union includes an array for further deserialization,
+            # overwrite the current "Union" hint with the list/tuple hint
+            # This has probably some weird side effects for nested Unions/Optionals
+            if get_origin(arg) in {list, tuple}:
+                hint = arg
         try:
             _type = merge_json_types(types)
         except TypeError as e:
