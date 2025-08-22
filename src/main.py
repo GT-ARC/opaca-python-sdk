@@ -1,5 +1,4 @@
-import opaca
-from opaca import Container
+from opaca import Container, run
 from sample import SampleAgent
 
 
@@ -10,4 +9,4 @@ agent1.subscribe_channel('test_channel')
 
 
 if __name__ == '__main__':
-    opaca.run(container)
+    run(container)

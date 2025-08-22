@@ -6,13 +6,163 @@ react to the REST routes.
 
 ## Installation
 
-This module has been deployed to PyPI (see https://pypi.org/project/opaca/), so in order to use it, you can just
-`pip install opaca` and then `import opaca` into your project.
+You can install the package by running `pip install opaca` and then `import opaca` into your project files.
 
 ## Developing new Agents
 
-An example for how to develop new agents using this module can be found in `sample.py`.
-The most important takeaways are:
+Following is a minimal example of how to develop a new agent:
+
+### Project Setup
+
+```
+your_project/
+├── src/
+│   ├── my_agent.py
+│   └── main.py
+├── resources/
+│   └── container.json
+├── Dockerfile
+└── requirements.txt
+```
+
+### Basic File Setup
+
+#### requirements.txt
+
+```
+opaca
+# Other required packages
+```
+
+#### Dockerfile
+
+```
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["python", "main.py"]
+```
+
+#### resources/container.json
+
+```
+{
+  "imageName": "<your-container-name>"
+}
+```
+
+#### src/main.py
+
+```
+from opaca import Container, run
+
+# Create a container based on the container.json file
+container = Container("resources/container.json")
+
+# Initialize the agents. The container must be passed to the agent, to automatically register the agent on the container.
+MyAgent(container=container, agent_id='MyAgent')
+
+# Run the container. This will start a FastAPI server and expose endpoints required for communication within the OPACA framework.
+if __name__ == "__main__":
+    run(container)
+```
+
+### Agent Implementation (`src/my_agent.py`)
+
+Start by setting up the agent class, inheriting from `opaca.AbstractAgent`:
+
+```
+from opaca import AbstractAgent
+
+class MyAgent(AbstractAgent):
+
+    def __init__(self, **kwargs):
+        super(MyAgent, self).__init__(**kwargs)
+```
+
+Next, define the actions the agent can perform and register this action with the `@action` decorator. In this example, we define a simple `add()` function:
+
+```
+@action
+    def add(x: float, y: float) -> float:
+        """Returns the sum of numbers x and y."""
+        return x + y
+```
+
+(**Note**: It is important that the action methods are **non-static** methods, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.)
+
+### Build and deploy the Agent Container
+
+1. Start by building your container image from the root directory of your just created project, using the `Dockerfile` you created: `docker build -t <your-container-name> .`
+2. Next, make sure you have a running OPACA Runtime Platform instance. The easiest way to achieve this, is by using the published docker image from the [OPACA-Core](https://github.com/gt-arc/opaca-core) repository: `docker container run -d -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -e PUBLIC_URL=http://<YOUR_IP>:8000 -e PLATFORM_ENVIRONMENT=DOCKER ghcr.io/gt-arc/opaca/opaca-platform:main` (Find out your local IP by running `ipconfig` on Windows or `ifconfig` on Linux).
+3. Finally, you can deploy your container to the running OPACA Platform. For this, you can use the integrated Swagger UI, which will be available at `http://<YOUR_IP>:8000/swagger-ui/index.html` once the OPACA Runtime Platform has been started. Navigate to the `POST /containers` endpoint, click "Try it out", replace the request body with the following content and then click "Execute":
+```
+{
+  "image": {
+    "imageName": "<your-container-name>"
+  }
+}
+```
+
+If an uuid is returned, the container has been deployed successfully. You can then test your implemented function by calling the `POST /invoke/{action}` route with your implemented action name and input parameters in the request body.
+
+An implemented example can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
+
+## Custom Data Types
+
+If your agent is using custom data types as either input or output parameters, you need to register them in the `resources/container.json` file in OpenAPI format.
+
+Here is an example for a custom data type `MyType`:
+
+In your agent class:
+
+```
+from pydantic import BaseModel
+from typing import List
+
+class MyType(BaseModel):
+    var_a: str
+    var_b: int = 0
+    var_c: List[str] = None
+```
+
+In the `resources/container.json` file:
+
+```
+{
+  "imageName": "<your-container-name>",
+  "definitions": {
+    "MyType": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MyType",
+      "type": "object",
+      "properties": {
+        "var_a": {
+          "description": "Optional description of var_a.",,
+          "type": "string"
+        },
+        "var_b": {
+          "description": "Optional description of var_b.",
+          "type": "integer"
+        },
+        "var_c": {
+          "description": "Optional description of var_c.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["var_a"]
+    }
+  }
+}
+```
+
+## Additional Information
+
 * All agent classes should extend the `AbstractAgent` class. Make sure to pass a `Container` object to the agent.
 * In the agent's constructor `__init__`, you can register actions the agents can perform using the `add_action()` method from the super-class. 
 * Alternatively, you can expose actions by using the `@action` decorator on a method.
@@ -21,12 +171,3 @@ The most important takeaways are:
 * When registering actions or streams, you can manually specify their name and description by using the `name` and `description` field within the parameter, e.g. `@action(name="MyAction", description="My description")`.
 * Methods declared as streams should return some iterator, e.g. by using the `yield` keyword on an iterable.
 * Messages from the `/send`  and `/broadcast` routes can be received by overriding the `receive_message()` method.
-
-
-## Building the Image and running the Container
-
-* `$ docker build -t sample-container-python .`
-* `$ docker run -p 8082:8082 sample-container-python`
-* Open http://localhost:8082/docs#/
-
-Or deploy the container to a running OPACA Runtime Platform and call it via the Platform's API.
