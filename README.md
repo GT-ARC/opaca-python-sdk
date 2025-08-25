@@ -10,105 +10,119 @@ You can install the package by running `pip install opaca` and then `import opac
 
 ## Developing new Agents
 
-Following is a minimal example of how to develop a new agent:
+Following is a minimal example of how to develop a new agent by using the OPACA Python SDK.
 
-### Project Setup
+1. Start by creating a new directory for your project and add the following files to it:
 
-```
-your_project/
-├── src/
-│   ├── my_agent.py
-│   └── main.py
-├── resources/
-│   └── container.json
-├── Dockerfile
-└── requirements.txt
-```
+    ```
+    your_project/
+    ├── src/
+    │   ├── my_agent.py
+    │   └── main.py
+    ├── resources/
+    │   └── container.json
+    ├── Dockerfile
+    └── requirements.txt
+    ```
 
-### Basic File Setup
+2. Then add the following basic contents to the stated Files:
 
-#### requirements.txt
+    #### requirements.txt
+    
+    ```
+    opaca
+    # Other required packages
+    ```
+    
+    #### Dockerfile
+    
+    ```
+    FROM python:3.12-slim
+    WORKDIR /app
+    COPY requirements.txt .
+    RUN pip install -r requirements.txt
+    COPY . .
+    CMD ["python", "main.py"]
+    ```
+    
+    #### resources/container.json
+    
+    ```
+    {
+      "imageName": "<your-container-name>"
+    }
+    ```
+    
+    #### src/main.py
+    
+    ```
+    from opaca import Container, run
+    
+    # Create a container based on the container.json file
+    container = Container("resources/container.json")
+    
+    # Initialize the agents. The container must be passed to the agent, to automatically register the agent on the container.
+    MyAgent(container=container, agent_id='MyAgent')
+    
+    # Run the container. This will start a FastAPI server and expose endpoints required for communication within the OPACA framework.
+    if __name__ == "__main__":
+        run(container)
+    ```
 
-```
-opaca
-# Other required packages
-```
+3. Finally, we will define the actual agent class in `src/my_agent.py`. In this example, we will define a simple agent, inheriting from `opaca.AbstractAgent` and registering the `add()` action with the decorator:
 
-#### Dockerfile
+    #### src/my_agent.py
 
-```
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-CMD ["python", "main.py"]
-```
+    ```
+    from opaca import AbstractAgent, action
+    
+    class MyAgent(AbstractAgent):
+    
+        def __init__(self, **kwargs):
+            super(MyAgent, self).__init__(**kwargs)
+   
+        @action
+        def add(x: float, y: float) -> float:
+            """Returns the sum of numbers x and y."""
+            return x + y
+    ```
 
-#### resources/container.json
+    **Important**:
 
-```
-{
-  "imageName": "<your-container-name>"
-}
-```
+   - It is required for all input parameters and output types to be annotated with type hints. The type hints are later resolved into JSON schema to be used within HTTP requests.
+   - Action methods need to be defined as **non-static**, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.
+    - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible.
 
-#### src/main.py
+## Build and deploy the Agent Container
 
-```
-from opaca import Container, run
+1. Build your container image from the root directory by using the `Dockerfile` you created: 
 
-# Create a container based on the container.json file
-container = Container("resources/container.json")
+    ```
+    docker build -t <your-container-name> .
+    ```
 
-# Initialize the agents. The container must be passed to the agent, to automatically register the agent on the container.
-MyAgent(container=container, agent_id='MyAgent')
+2. Next, make sure you have a running OPACA Runtime Platform instance. The easiest way to achieve this is by using the published docker image from the [OPACA-Core](https://github.com/gt-arc/opaca-core) repository. (**Note**: Find out your local IP by running `ipconfig` on Windows or `ifconfig` on Linux. `localhost` will not work!)
 
-# Run the container. This will start a FastAPI server and expose endpoints required for communication within the OPACA framework.
-if __name__ == "__main__":
-    run(container)
-```
+    ```
+    docker container run -d -p 8000:8000 \
+   -v /var/run/docker.sock:/var/run/docker.sock \
+   -e PUBLIC_URL=http://<YOUR_IP>:8000 \
+   -e PLATFORM_ENVIRONMENT=DOCKER ghcr.io/gt-arc/opaca/opaca-platform:main
+    ```
 
-### Agent Implementation (`src/my_agent.py`)
-
-Start by setting up the agent class, inheriting from `opaca.AbstractAgent`:
-
-```
-from opaca import AbstractAgent
-
-class MyAgent(AbstractAgent):
-
-    def __init__(self, **kwargs):
-        super(MyAgent, self).__init__(**kwargs)
-```
-
-Next, define the actions the agent can perform and register this action with the `@action` decorator. In this example, we define a simple `add()` function:
-
-```
-@action
-    def add(x: float, y: float) -> float:
-        """Returns the sum of numbers x and y."""
-        return x + y
-```
-
-(**Note**: It is important that the action methods are **non-static** methods, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.)
-
-### Build and deploy the Agent Container
-
-1. Start by building your container image from the root directory of your just created project, using the `Dockerfile` you created: `docker build -t <your-container-name> .`
-2. Next, make sure you have a running OPACA Runtime Platform instance. The easiest way to achieve this, is by using the published docker image from the [OPACA-Core](https://github.com/gt-arc/opaca-core) repository: `docker container run -d -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -e PUBLIC_URL=http://<YOUR_IP>:8000 -e PLATFORM_ENVIRONMENT=DOCKER ghcr.io/gt-arc/opaca/opaca-platform:main` (Find out your local IP by running `ipconfig` on Windows or `ifconfig` on Linux).
 3. Finally, you can deploy your container to the running OPACA Platform. For this, you can use the integrated Swagger UI, which will be available at `http://<YOUR_IP>:8000/swagger-ui/index.html` once the OPACA Runtime Platform has been started. Navigate to the `POST /containers` endpoint, click "Try it out", replace the request body with the following content and then click "Execute":
-```
-{
-  "image": {
-    "imageName": "<your-container-name>"
-  }
-}
-```
+    
+    ```
+    {
+      "image": {
+        "imageName": "<your-container-name>"
+      }
+    }
+    ```
 
-If an uuid is returned, the container has been deployed successfully. You can then test your implemented function by calling the `POST /invoke/{action}` route with your implemented action name and input parameters in the request body.
+    If an uuid is returned, the container has been deployed successfully. You can then test your implemented function by calling the `POST /invoke/{action}` route with your implemented action name and input parameters in the request body.
 
-An implemented example can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
+    An implemented example can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
 
 ## Custom Data Types
 
@@ -161,7 +175,7 @@ In the `resources/container.json` file:
 }
 ```
 
-## Passing Environment Variables
+## Environment Variables
 
 You can pass environment variables to your agent container by declaring them in the `resources/container.json` file and then passing the actual values during the container deployment via the `POST /containers` endpoint.
 
@@ -205,6 +219,14 @@ During the container deployment, your request body would then look like this:
   }
 }
 ```
+
+#### Parameter explanation:
+
+- `name`: The name of the environment variable.
+- `type`: The type of the environment variable. Use [JSON schema](https://json-schema.org/understanding-json-schema/reference/type) types.
+- `required`: Whether the environment variable is required or not. If `true`, the environment variable must be passed during the container deployment. Otherwise the container deployment will fail.
+- `confidential`: If `true`, the value of this environment variable will never be logged or exposed with any OPACA API calls.
+- `defaultValue`: The default value of the environment variable. Set to `null` if the parameter is required.
 
 ## Additional Information
 
