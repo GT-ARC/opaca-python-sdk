@@ -25,7 +25,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
     └── requirements.txt
     ```
 
-2. Then add the following basic contents to the stated Files:
+2. Then add the following basic contents to these files:
 
     #### requirements.txt
     
@@ -69,7 +69,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
         run(container)
     ```
 
-3. Finally, we will define the actual agent class in `src/my_agent.py`. In this example, we will define a simple agent, inheriting from `opaca.AbstractAgent` and registering the `add()` action with the decorator:
+3. Finally, define the actual agent class in `src/my_agent.py` by creating a new class inheriting from `opaca.AbstractAgent`. Then add a class method for each action you want to expose and use the `@action` decorator to register it as an OPACA action.
 
     #### src/my_agent.py
 
@@ -87,11 +87,13 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
             return x + y
     ```
 
-    **Important**:
+    **Additional Notes**:
 
-   - It is required for all input parameters and output types to be annotated with type hints. The type hints are later resolved into JSON schema to be used within HTTP requests.
+   - It is required for all input and output parameters to be annotated with type hints. The type hints are later resolved into JSON schema to be used within HTTP requests.
    - Action methods need to be defined as **non-static**, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.
-    - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible.
+   - You can also use type hints from the `typing` library to define the input and output parameters. This includes types such as `List`, `Dict`, `Tuple`, `Optional`, etc.
+   - Agent actions can also be defined `async`.
+   - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible.
 
 ## Build and deploy the Agent Container
 
@@ -126,7 +128,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
 ## Custom Data Types
 
-If your agent is using custom data types as either input or output parameters, you need to register them in the `resources/container.json` file in OpenAPI format.
+If your agent is using custom data types as either input or output parameters, you need to register them in the `resources/container.json` file in OpenAPI format. It is recommended to define custom data types with the `BaseModel` class from the [Pydantic](https://pydantic-docs.helpmanual.io/) library.
 
 Here is an example for a custom data type `MyType`:
 
@@ -238,3 +240,8 @@ During the container deployment, your request body would then look like this:
 * When registering actions or streams, you can manually specify their name and description by using the `name` and `description` field within the parameter, e.g. `@action(name="MyAction", description="My description")`.
 * Methods declared as streams should return some iterator, e.g. by using the `yield` keyword on an iterable.
 * Messages from the `/send`  and `/broadcast` routes can be received by overriding the `receive_message()` method.
+
+## Linked Projects
+
+* [OPACA Core](https://github.com/GT-ARC/opaca-core): The OPACA Runtime Platform.
+* [OPACA-LLM](https://github.com/GT-ARC/opaca-llm-ui): A complementary LLM integration, autonomously calling agent actions on a connected OPACA Runtime Platform.
