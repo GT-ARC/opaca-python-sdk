@@ -59,7 +59,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
     from opaca import Container, run
     
     # Create a container based on the container.json file
-    container = Container("resources/container.json")
+    container = Container("../resources/container.json")
     
     # Initialize the agents. The container must be passed to the agent, to automatically register the agent on the container.
     MyAgent(container=container, agent_id='MyAgent')
@@ -87,15 +87,17 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
             return x + y
     ```
 
-    **Additional Notes**:
+    **`@action` Decorator - Additional Notes**:
 
-   - It is required for all input and output parameters to be annotated with type hints. The type hints are later resolved into JSON schema to be used within HTTP requests.
+   - It is required for **all input and output parameters to be annotated with type hints**. The type hints are later resolved into JSON schema to be used within HTTP requests.
    - Action methods need to be defined as **non-static**, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.
    - You can also use type hints from the `typing` library to define the input and output parameters. This includes types such as `List`, `Dict`, `Tuple`, `Optional`, etc.
    - Agent actions can also be defined `async`.
-   - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible.
+   - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible. As a workaround, you can always fall back to using the `self.add_action()` in the agent constructor to manually register an action. A reference implementation can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
 
-## Build and deploy the Agent Container
+## Testing & Deployment
+
+### Build and Deploy the Agent Container (recommended)
 
 1. Build your container image from the root directory by using the `Dockerfile` you created: 
 
@@ -124,7 +126,13 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
     If an uuid is returned, the container has been deployed successfully. You can then test your implemented function by calling the `POST /invoke/{action}` route with your implemented action name and input parameters in the request body.
 
+    If you find a problem with your container and want to test it again after fixing, you can paste the payload from `POST /container` to `PUT /container`. This will automatically DELETE and then POST a new container (effectively updating the old container), whereas calling POST again would start a second instance.
+
     An implemented example can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
+
+### Run the Agent Container Locally
+
+Alternatively, you can directly start your agent container by running `python main.py` from the root directory. This will start a FastAPI server and make the endpoints of the agent available for testing at http://localhost:8082/docs, assuming you haven't customized the port in the `run()` function.
 
 ## Custom Data Types
 
@@ -179,6 +187,8 @@ In the `resources/container.json` file:
 
 ## Environment Variables
 
+Agent Containers can be passed environment variables during deployment. This is useful if you need to pass either sensitive information, such as an api-key, or if you want to configure your agent based on some external configuration, such as a database connection string.
+
 You can pass environment variables to your agent container by declaring them in the `resources/container.json` file and then passing the actual values during the container deployment via the `POST /containers` endpoint.
 
 Here is an example for an environment variable `MY_API_KEY`:
@@ -200,7 +210,7 @@ In your `resources/container.json` file:
 }
 ```
 
-During the container deployment, your request body would then look like this:
+During the container deployment, your request body to the `POST /containers` would then look like this:
 
 ```
 {
@@ -227,7 +237,7 @@ During the container deployment, your request body would then look like this:
 - `name`: The name of the environment variable.
 - `type`: The type of the environment variable. Use [JSON schema](https://json-schema.org/understanding-json-schema/reference/type) types.
 - `required`: Whether the environment variable is required or not. If `true`, the environment variable must be passed during the container deployment. Otherwise the container deployment will fail.
-- `confidential`: If `true`, the value of this environment variable will never be logged or exposed with any OPACA API calls.
+- `confidential`: If `true`, the value of this environment variable will never be logged or exposed within any OPACA API calls.
 - `defaultValue`: The default value of the environment variable. Set to `null` if the parameter is required.
 
 ## Additional Information
