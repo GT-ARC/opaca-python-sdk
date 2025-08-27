@@ -2,15 +2,19 @@
 
 All changes to the opaca package will be documented in this file.
 
-## [0.0.5] - 
+## [0.0.5] - 2025-08-27
 
 ### Added
+
+- Agent actions and streams with the `@action`/`@stream` decorators can now be declared `async`.
+- Added a simplified startup guide to the [README](README.md).
 
 ### Changed
 
 ### Fixed
 
 - List type hints in `Optional` or `Union` are now correctly resolved.
+- Fixed the sample agent files to follow the simplified startup process.
 
 ## [0.0.4] - 2025-07-23
 
