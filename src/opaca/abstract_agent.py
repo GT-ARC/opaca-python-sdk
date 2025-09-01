@@ -4,7 +4,7 @@ import uuid
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
 from .utils import http_error
-from .decorators import register_actions, register_streams
+from .decorators import register_actions, register_streams, update_definitions
 
 if TYPE_CHECKING:
     from .container import Container
@@ -23,6 +23,7 @@ class AbstractAgent:
         self.container.add_agent(self)
         register_actions(self)
         register_streams(self)
+        update_definitions(self)
 
     def get_action(self, name: str):
         """

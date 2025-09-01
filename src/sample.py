@@ -3,6 +3,14 @@ from time import sleep
 from opaca import action, stream
 from opaca.abstract_agent import AbstractAgent
 from opaca.models import Message, StreamDescription, Parameter
+from pydantic import BaseModel
+
+
+class SampleData(BaseModel):
+    name: str
+    age: int
+    gender: str | None
+    children: list['SampleData']
 
 
 class SampleAgent(AbstractAgent):
@@ -50,6 +58,13 @@ class SampleAgent(AbstractAgent):
         print(f'{self.agent_id} executing time_consuming action, taking approx {1 + sleep_time} seconds')
         sleep(1 + sleep_time)
         return text
+    
+    @action
+    def action_with_data_class(self, person: SampleData) -> SampleData:
+        """
+        No-op action for testing/showcasing JSON-Schema generation for Pydantic data classes
+        """
+        return person
 
     @action(name='ConcatenateArray', description='Concatenates the given array to a string and returns the result.')
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
