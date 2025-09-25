@@ -37,12 +37,14 @@ class ActionDescription(BaseModel):
 
 
 class StreamDescription(BaseModel):
+
     class Mode(Enum):
         GET = 'GET'
         POST = 'POST'
+
     name: str
-    description: str
-    mode: Mode
+    description: str = ''
+    mode: Mode = Mode.GET
     callback: Optional[Callable] = PrivateAttr(None)
 
 
@@ -63,9 +65,11 @@ class AgentDescription(BaseModel):
 
 
 class ImageDescription(BaseModel):
+
     class PortDescription(BaseModel):
         protocol: str
         description: str = ''
+
     imageName: str
     requires: List[str] = []
     provides: List[str] = []
