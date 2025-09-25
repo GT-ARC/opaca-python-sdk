@@ -1,6 +1,6 @@
 from collections.abc import Callable
 
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, Field
 from typing import Dict, List, Any, Optional
 from enum import Enum
 
@@ -33,7 +33,7 @@ class ActionDescription(BaseModel):
     description: str
     parameters: Dict[str, Parameter]
     result: Parameter
-    callback: Optional[Callable] = PrivateAttr(None)
+    callback: Optional[Callable] = Field(None, exclude=True)
 
 
 class StreamDescription(BaseModel):
@@ -45,7 +45,7 @@ class StreamDescription(BaseModel):
     name: str
     description: str = ''
     mode: Mode = Mode.GET
-    callback: Optional[Callable] = PrivateAttr(None)
+    callback: Optional[Callable] = Field(None, exclude=True)
 
 
 class ImageParameter(BaseModel):
