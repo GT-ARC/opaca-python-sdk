@@ -29,14 +29,14 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
     #### requirements.txt
     
-    ```
+    ```pycon
     opaca
     # Other required packages
     ```
     
     #### Dockerfile
     
-    ```
+    ```docker
     FROM python:3.12-slim
     WORKDIR /app
     COPY requirements.txt .
@@ -47,7 +47,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
     
     #### resources/container.json
     
-    ```
+    ```json
     {
       "imageName": "<your-container-name>"
     }
@@ -55,8 +55,9 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
     
     #### src/main.py
     
-    ```
+    ```pycon
     from opaca import Container, run
+    from my_agent import MyAgent
     
     # Create a container based on the container.json file
     container = Container("../resources/container.json")
@@ -73,7 +74,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
     #### src/my_agent.py
 
-    ```
+    ```pycon
     from opaca import AbstractAgent, action
     
     class MyAgent(AbstractAgent):
@@ -101,13 +102,13 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
 1. Build your container image from the root directory by using the `Dockerfile` you created: 
 
-    ```
+    ```shell
     docker build -t <your-container-name> .
     ```
 
 2. Next, make sure you have a running OPACA Runtime Platform instance. The easiest way to achieve this is by using the published docker image from the [OPACA-Core](https://github.com/gt-arc/opaca-core) repository. (**Note**: Find out your local IP by running `ipconfig` on Windows or `ifconfig` on Linux. `localhost` will not work!)
 
-    ```
+    ```shell
     docker container run -d -p 8000:8000 \
    -v /var/run/docker.sock:/var/run/docker.sock \
    -e PUBLIC_URL=http://<YOUR_IP>:8000 \
@@ -116,7 +117,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
 3. Finally, you can deploy your container to the running OPACA Platform. For this, you can use the integrated Swagger UI, which will be available at `http://<YOUR_IP>:8000/swagger-ui/index.html` once the OPACA Runtime Platform has been started. Navigate to the `POST /containers` endpoint, click "Try it out", replace the request body with the following content and then click "Execute":
     
-    ```
+    ```json
     {
       "image": {
         "imageName": "<your-container-name>"
@@ -142,7 +143,7 @@ Here is an example for a custom data type `MyType`:
 
 In your agent class:
 
-```
+```pycon
 from pydantic import BaseModel
 from typing import List
 
@@ -154,7 +155,7 @@ class MyType(BaseModel):
 
 In the `resources/container.json` file:
 
-```
+```json
 {
   "imageName": "<your-container-name>",
   "definitions": {
@@ -164,7 +165,7 @@ In the `resources/container.json` file:
       "type": "object",
       "properties": {
         "var_a": {
-          "description": "Optional description of var_a.",,
+          "description": "Optional description of var_a.",
           "type": "string"
         },
         "var_b": {
@@ -195,9 +196,9 @@ Here is an example for an environment variable `MY_API_KEY`:
 
 In your `resources/container.json` file:
 
-```
+```json
 {
-  "imageName": "<your-container-name>,
+  "imageName": "<your-container-name>",
   "parameters": [
     {
         "name": "MY_API_KEY",
@@ -212,10 +213,10 @@ In your `resources/container.json` file:
 
 During the container deployment, your request body to the `POST /containers` would then look like this:
 
-```
+```json
 {
   "image": {
-    "imageName": "<your-container-name>,
+    "imageName": "<your-container-name>",
     "parameters": [
       {
         "name": "MY_API_KEY",
@@ -244,8 +245,9 @@ During the container deployment, your request body to the `POST /containers` wou
 
 You can also define custom routes for your container, by manually creating a FastAPI app with the `create_routes()` function and adding custom routes to it. Remember that you then need to pass your custom FastAPI app to the `run()` function.
 
-```
+```pycon
 from opaca import Container, run, create_routes
+from my_agent import MyAgent
 
 # Create a container based on the container.json file
 container = Container("../resources/container.json")
