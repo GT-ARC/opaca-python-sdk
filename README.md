@@ -240,6 +240,31 @@ During the container deployment, your request body to the `POST /containers` wou
 - `confidential`: If `true`, the value of this environment variable will never be logged or exposed within any OPACA API calls.
 - `defaultValue`: The default value of the environment variable. Set to `null` if the parameter is required.
 
+## Custom Routes
+
+You can also define custom routes for your container, by manually creating a FastAPI app with the `create_routes()` function and adding custom routes to it. Remember that you then need to pass your custom FastAPI app to the `run()` function.
+
+```
+from opaca import Container, run, create_routes
+
+# Create a container based on the container.json file
+container = Container("../resources/container.json")
+
+# Initialize the agents. The container must be passed to the agent, to automatically register the agent on the container.
+MyAgent(container=container, agent_id='MyAgent')
+
+# Create a pre-configured FastAPI app and add custom routes to it.
+app = create_routes("my-agent", container)
+
+@app.get("/my-custom-route")
+def my_custom_route():
+    return "Hello World!"
+
+# Run the container. This will start a FastAPI server and expose endpoints required for communication within the OPACA framework.
+if __name__ == "__main__":
+    run(container, app=app)
+```
+
 ## Additional Information
 
 * All agent classes should extend the `AbstractAgent` class. Make sure to pass a `Container` object to the agent.
