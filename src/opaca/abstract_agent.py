@@ -2,7 +2,7 @@ from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
 import uuid
 
-from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
+from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg
 from .utils import http_error
 from .decorators import register_actions, register_streams
 
@@ -141,6 +141,21 @@ class AbstractAgent:
         """
         if self.container is not None:
             self.container.unsubscribe_channel(channel, self)
+
+    async def handle_login(self, loginMsg: LoginMsg):
+        """
+        Implement this method in your agent to handle login requests for any external services.
+
+        The loginMsg contains the 'username' and 'password' provided by the user, as well as a random 'token' as
+        an uuid, which can be used to associate retrieved login details with this specific user.
+        """
+        pass
+
+    async def handle_logout(self):
+        """
+        Implement this method in your agent to handle logout requests for any external services.
+        """
+        pass
 
     def make_description(self) -> AgentDescription:
         return AgentDescription(

@@ -1,10 +1,12 @@
 import os
+import uuid
 from datetime import datetime
 from typing import Dict, List, Any
 import json
 
 from .abstract_agent import AbstractAgent
-from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription
+from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
+    Login
 from .utils import http_error
 
 
@@ -130,6 +132,15 @@ class Container:
             return
         for agent in self.channels[channel]:
             agent.receive_message(message)
+
+    async def login(self, login: Login):
+        for agent in self.agents.values():
+            token = str(uuid.uuid4())
+            await agent.handle_login(LoginMsg(token=token, login=login))
+
+    async def logout(self):
+        for agent in self.agents.values():
+            await agent.handle_logout()
 
     def get_description(self) -> ContainerDescription:
         return ContainerDescription(

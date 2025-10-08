@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from starlette.responses import StreamingResponse
 
 from .container import Container
-from .models import Message, AgentDescription, ContainerDescription, StreamDescription
+from .models import Message, AgentDescription, ContainerDescription, StreamDescription, Login
 
 
 def create_routes(title: str, container: Container) -> FastAPI:
@@ -84,6 +84,20 @@ def create_routes(title: str, container: Container) -> FastAPI:
         GET a stream from the specified agent.
         """
         return make_stream_response(stream, StreamDescription.Mode.GET, agent_id)
+
+    @app.post('/login')
+    async def login(login: Login):
+        """
+        Provide login credentials required for actions requiring authentication.
+        """
+        return await container.login(login)
+
+    @app.post('/logout')
+    async def logout():
+        """
+        Performs a logout operation.
+        """
+        return await container.logout()
 
 
     def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None) -> StreamingResponse:
