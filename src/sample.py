@@ -1,8 +1,10 @@
+import uuid
 from time import sleep
+from typing import Dict, Callable
 
 from opaca import action, stream
 from opaca.abstract_agent import AbstractAgent
-from opaca.models import Message, StreamDescription, Parameter
+from opaca.models import Message, StreamDescription, Parameter, Login
 
 
 class SampleAgent(AbstractAgent):
@@ -13,6 +15,7 @@ class SampleAgent(AbstractAgent):
 
     def __init__(self, **kwargs):
         super(SampleAgent, self).__init__(**kwargs)
+        self.clients: Dict[str, Callable] = {}
         self.add_action(
             name='SampleAction',
             description='Returns a simple string acknowledging the action\'s execution with the given parameters.',
@@ -68,6 +71,29 @@ class SampleAgent(AbstractAgent):
         Returns a sample stream value.
         """
         yield b'sampleStream data'
+
+    # Container Login
+
+    async def handle_login(self, login: Login):
+        """
+        This method should construct a login token specific client for an external api requiring auth.
+        """
+        # Perform external API login
+        self.clients['login'] = lambda: "Logged in"
+
+    async def handle_logout(self):
+        """
+        This method should remove the callable client associated to the login token.
+        """
+        del self.clients['login']
+
+    @action(auth=True)
+    async def login_test(self, login_token: str) -> str:
+        """
+        After a successful login, use the constructed client to perform some action
+        """
+        print(f'Client response: {login_token}')
+        return login_token
 
     def receive_message(self, message: Message):
         super().receive_message(message)

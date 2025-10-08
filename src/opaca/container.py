@@ -63,21 +63,22 @@ class Container:
     def has_agent(self, agent_id) -> bool:
         return agent_id in self.agents
 
-    async def invoke_action(self, name: str, parameters: Dict[str, Any]) -> str:
+    async def invoke_action(self, name: str, parameters: Dict[str, Any], login_token: str = None):
         """
         Invoke action on any agent that knows the action.
         """
         for agent in self.agents.values():
             if agent.knows_action(name):
-                return await agent.invoke_action(name, parameters)
+                print(f'Calling action with login_token: {login_token}')
+                return await agent.invoke_action(name, parameters, login_token)
         raise http_error(400, f'Unknown action: {name}.')
 
-    async def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any]):
+    async def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any], login_token: str = None):
         """
         Invoke action on the specified agent.
         """
         if self.has_agent(agent_id):
-            return await self.get_agent(agent_id).invoke_action(name, parameters)
+            return await self.get_agent(agent_id).invoke_action(name, parameters, login_token)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
     def invoke_stream(self, name: str, mode: StreamDescription.Mode):
@@ -134,9 +135,10 @@ class Container:
             agent.receive_message(message)
 
     async def login(self, login: Login):
+        token = str(uuid.uuid4())
         for agent in self.agents.values():
-            token = str(uuid.uuid4())
             await agent.handle_login(LoginMsg(token=token, login=login))
+        return token
 
     async def logout(self):
         for agent in self.agents.values():

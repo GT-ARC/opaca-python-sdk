@@ -11,11 +11,12 @@ if TYPE_CHECKING:
     from .abstract_agent import AbstractAgent
 
 
-def action(_func: Optional[Callable] = None, *, name: str = '', description: str = ''):
+def action(_func: Optional[Callable] = None, *, name: str = '', description: str = '', auth: bool = False):
     def decorator(func: Callable):
         func._is_action = True
         func._name = name
         func._description = description
+        func._auth = auth
         return func
 
     return decorator(_func) if _func else decorator
@@ -43,6 +44,13 @@ def register_actions(agent: 'AbstractAgent') -> None:
         params, return_type = parse_params(func)
         action_name = parse_name(func, name)
         description = parse_description(func)
+
+        if getattr(func, '_auth', False):
+            if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
+                       for name, p in list(params.items())):
+                raise TypeError(f'The action {action_name} was declared with auth and therefore needs to define '
+                                f'the parameter "login_token".')
+            params.pop("login_token")
 
         agent.add_action(
             name=action_name,

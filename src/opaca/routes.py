@@ -1,5 +1,7 @@
-from typing import List, Dict, Any
-from fastapi import FastAPI
+import traceback
+from typing import List, Dict, Any, Annotated
+from fastapi import FastAPI, Request
+from fastapi.params import Header
 from starlette.responses import StreamingResponse
 
 from .container import Container
@@ -55,57 +57,62 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/invoke/{action}', response_model=Any)
-    async def invoke_action(action: str, parameters: Dict[str, Any]):
+    async def invoke_action(action: str, parameters: Dict[str, Any], ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Invoke the specified action on any agent that knows the action.
         """
-        return await container.invoke_action(action, parameters)
+        print(f'Got header token: {ContainerLoginToken}')
+        try:
+            return await container.invoke_action(action, parameters, ContainerLoginToken)
+        except Exception as e:
+            print(f'Exception: {e} with traceback: {traceback.format_exc()}')
 
 
     @app.post('/invoke/{action}/{agentId}', response_model=Any)
-    async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any]):
+    async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any], ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Invoke an action on a specific agent.
         """
+        print(f'Got header token: {ContainerLoginToken}')
         return await container.invoke_agent_action(action, agentId, parameters)
 
 
     @app.get('/stream/{stream}', response_class=StreamingResponse)
-    async def get_stream(stream: str):
+    async def get_stream(stream: str, ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         GET a stream from any agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET)
+        return make_stream_response(stream, StreamDescription.Mode.GET, ContainerLoginToken)
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
-    async def get_agent_stream(stream: str, agent_id: str):
+    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         GET a stream from the specified agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET, agent_id)
+        return make_stream_response(stream, StreamDescription.Mode.GET, agent_id, ContainerLoginToken)
 
     @app.post('/login')
-    async def login(login: Login):
+    async def login(request: Request, login: Login, ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Provide login credentials required for actions requiring authentication.
         """
-        return await container.login(login)
+        return await container.with_token(ContainerLoginToken).login(login)
 
     @app.post('/logout')
-    async def logout():
+    async def logout(ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Performs a logout operation.
         """
-        return await container.logout()
+        return await container.with_token(ContainerLoginToken).logout()
 
 
-    def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None) -> StreamingResponse:
+    def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:
         """
         Converts the byte stream from the stream invocation into the correct response format.
         """
-        result = container.invoke_stream(name, mode) if agent_id is None \
-            else container.invoke_agent_stream(name, mode, agent_id)
+        result = container.with_token(login_token).invoke_stream(name, mode) if agent_id is None \
+            else container.with_token(login_token).invoke_agent_stream(name, mode, agent_id)
         return StreamingResponse(result, media_type='application/octet-stream')
 
     return app

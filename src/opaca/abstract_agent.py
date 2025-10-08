@@ -1,3 +1,4 @@
+import functools
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
 import uuid
@@ -58,7 +59,7 @@ class AbstractAgent:
         if self.knows_action(name):
             del self.actions[name]
 
-    async def invoke_action(self, name: str, parameters: Dict[str, Any]) -> Optional[Any]:
+    async def invoke_action(self, name: str, parameters: Dict[str, Any], login_token: str) -> Optional[Any]:
         """
         Invoke action on this agent.
         """
@@ -67,6 +68,15 @@ class AbstractAgent:
         try:
             action = self.get_action(name)
             callback = action['callback']
+
+            if getattr(callback, '_auth', False):
+                if not login_token:
+                    raise http_error(401, 'Missing credentials')
+                if iscoroutinefunction(callback):
+                    return await callback(login_token=login_token, **parameters)
+                else:
+                    return callback(login_token=login_token, **parameters)
+
 
             if iscoroutinefunction(callback):
                 return await callback(**parameters)
