@@ -80,12 +80,12 @@ class SampleAgent(AbstractAgent):
 
     # Container Login
 
-    async def handle_login(self, login: LoginMsg):
+    async def handle_login(self, login_msg: LoginMsg):
         """
         This method should construct a login token specific client for an external api requiring auth.
         """
         # Perform external API login
-        self.clients[login.token] = lambda: f'Logged in as user: {login.login.username}'
+        self.clients[login_msg.token] = lambda: f'Logged in as user: {login_msg.login.username}'
 
     async def handle_logout(self, login_token: str):
         """

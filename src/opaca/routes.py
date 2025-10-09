@@ -87,18 +87,18 @@ def create_routes(title: str, container: Container) -> FastAPI:
         return make_stream_response(stream, StreamDescription.Mode.GET, agent_id, ContainerLoginToken)
 
     @app.post('/login')
-    async def login(login: Login):
+    async def handle_login(login: Login):
         """
         Provide login credentials required for actions requiring authentication.
         """
-        return await container.login(login)
+        return await container.handle_login(login)
 
     @app.post('/logout')
-    async def logout(ContainerLoginToken: Annotated[str | None, Header()] = None):
+    async def handle_logout(ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Performs a logout operation.
         """
-        return await container.logout(ContainerLoginToken)
+        return await container.handle_logout(ContainerLoginToken)
 
 
     def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:

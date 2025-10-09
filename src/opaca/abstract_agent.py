@@ -149,7 +149,7 @@ class AbstractAgent:
         if self.container is not None:
             self.container.unsubscribe_channel(channel, self)
 
-    async def handle_login(self, loginMsg: LoginMsg):
+    async def handle_login(self, login_msg: LoginMsg):
         """
         Implement this method in your agent to handle login requests for any external services.
 

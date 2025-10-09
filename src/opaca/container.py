@@ -133,13 +133,13 @@ class Container:
         for agent in self.channels[channel]:
             agent.receive_message(message)
 
-    async def login(self, login: Login) -> str:
+    async def handle_login(self, login: Login) -> str:
         token = str(uuid.uuid4())
         for agent in self.agents.values():
             await agent.handle_login(LoginMsg(token=token, login=login))
         return token
 
-    async def logout(self, login_token: str = None) -> bool:
+    async def handle_logout(self, login_token: str = None) -> bool:
         if not login_token:
             return False
         for agent in self.agents.values():
