@@ -2,9 +2,11 @@ import uuid
 from time import sleep
 from typing import Dict, Callable
 
+from fastapi import HTTPException
+
 from opaca import action, stream
 from opaca.abstract_agent import AbstractAgent
-from opaca.models import Message, StreamDescription, Parameter, Login
+from opaca.models import Message, StreamDescription, Parameter, Login, LoginMsg
 
 
 class SampleAgent(AbstractAgent):
@@ -29,6 +31,8 @@ class SampleAgent(AbstractAgent):
             mode=StreamDescription.Mode.GET,
             callback=self.sample_stream
         )
+
+    # Actions
 
     def sample_action(self, param1: str, param2: int) -> str:
         """
@@ -59,6 +63,8 @@ class SampleAgent(AbstractAgent):
         print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
         return separator.join(array)
 
+    # Streams
+
     async def sample_stream(self):
         """
         Returns a sample stream value.
@@ -74,26 +80,28 @@ class SampleAgent(AbstractAgent):
 
     # Container Login
 
-    async def handle_login(self, login: Login):
+    def handle_login(self, login: LoginMsg):
         """
         This method should construct a login token specific client for an external api requiring auth.
         """
         # Perform external API login
-        self.clients['login'] = lambda: "Logged in"
+        self.clients[login.token] = lambda: f'Logged in as user: {login.login.username}'
 
-    async def handle_logout(self):
+    async def handle_logout(self, login_token: str):
         """
         This method should remove the callable client associated to the login token.
         """
-        del self.clients['login']
+        del self.clients[login_token]
 
     @action(auth=True)
     async def login_test(self, login_token: str) -> str:
         """
-        After a successful login, use the constructed client to perform some action
+        After a successful login, use the constructed client to perform some action.
+        It is important that actions with enabled authentication define the "login_token" parameter.
         """
-        print(f'Client response: {login_token}')
-        return login_token
+        if login_token not in self.clients.keys():
+            raise HTTPException(status_code=401, detail='Missing credentials')
+        return f'Calling authenticated client with login_token: {login_token}\n{self.clients[login_token]()}'
 
     def receive_message(self, message: Message):
         super().receive_message(message)
