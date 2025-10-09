@@ -1,4 +1,3 @@
-import functools
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
 import uuid
@@ -72,11 +71,7 @@ class AbstractAgent:
             if getattr(callback, '_auth', False):
                 if not login_token:
                     raise http_error(401, 'Missing credentials')
-                if iscoroutinefunction(callback):
-                    return await callback(login_token=login_token, **parameters)
-                else:
-                    return callback(login_token=login_token, **parameters)
-
+                parameters['login_token'] = login_token
 
             if iscoroutinefunction(callback):
                 return await callback(**parameters)
@@ -161,9 +156,10 @@ class AbstractAgent:
         """
         pass
 
-    async def handle_logout(self):
+    async def handle_logout(self, login_token: str):
         """
         Implement this method in your agent to handle logout requests for any external services.
+        Use the provided login_token to identify the user.
         """
         pass
 

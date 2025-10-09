@@ -1,6 +1,5 @@
-import traceback
 from typing import List, Dict, Any, Annotated
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.params import Header
 from starlette.responses import StreamingResponse
 
@@ -61,11 +60,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Invoke the specified action on any agent that knows the action.
         """
-        print(f'Got header token: {ContainerLoginToken}')
-        try:
-            return await container.invoke_action(action, parameters, ContainerLoginToken)
-        except Exception as e:
-            print(f'Exception: {e} with traceback: {traceback.format_exc()}')
+        return await container.invoke_action(action, parameters, ContainerLoginToken)
 
 
     @app.post('/invoke/{action}/{agentId}', response_model=Any)
@@ -73,8 +68,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Invoke an action on a specific agent.
         """
-        print(f'Got header token: {ContainerLoginToken}')
-        return await container.invoke_agent_action(action, agentId, parameters)
+        return await container.invoke_agent_action(action, agentId, parameters, ContainerLoginToken)
 
 
     @app.get('/stream/{stream}', response_class=StreamingResponse)
@@ -93,26 +87,26 @@ def create_routes(title: str, container: Container) -> FastAPI:
         return make_stream_response(stream, StreamDescription.Mode.GET, agent_id, ContainerLoginToken)
 
     @app.post('/login')
-    async def login(request: Request, login: Login, ContainerLoginToken: Annotated[str | None, Header()] = None):
+    async def login(login: Login):
         """
         Provide login credentials required for actions requiring authentication.
         """
-        return await container.with_token(ContainerLoginToken).login(login)
+        return await container.login(login)
 
     @app.post('/logout')
     async def logout(ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Performs a logout operation.
         """
-        return await container.with_token(ContainerLoginToken).logout()
+        return await container.logout(ContainerLoginToken)
 
 
     def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:
         """
         Converts the byte stream from the stream invocation into the correct response format.
         """
-        result = container.with_token(login_token).invoke_stream(name, mode) if agent_id is None \
-            else container.with_token(login_token).invoke_agent_stream(name, mode, agent_id)
+        result = container.invoke_stream(name, mode, login_token) if agent_id is None \
+            else container.invoke_agent_stream(name, mode, agent_id, login_token)
         return StreamingResponse(result, media_type='application/octet-stream')
 
     return app
