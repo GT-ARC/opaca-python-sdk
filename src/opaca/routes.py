@@ -76,7 +76,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         GET a stream from any agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET, ContainerLoginToken)
+        return make_stream_response(stream, StreamDescription.Mode.GET, login_token=ContainerLoginToken)
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)

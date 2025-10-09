@@ -80,7 +80,7 @@ class SampleAgent(AbstractAgent):
 
     # Container Login
 
-    def handle_login(self, login: LoginMsg):
+    async def handle_login(self, login: LoginMsg):
         """
         This method should construct a login token specific client for an external api requiring auth.
         """
@@ -100,8 +100,17 @@ class SampleAgent(AbstractAgent):
         It is important that actions with enabled authentication define the "login_token" parameter.
         """
         if login_token not in self.clients.keys():
-            raise HTTPException(status_code=401, detail='Missing credentials')
+            raise HTTPException(status_code=403, detail='Forbidden')
         return f'Calling authenticated client with login_token: {login_token}\n{self.clients[login_token]()}'
+
+    @stream(mode=StreamDescription.Mode.GET, auth=True)
+    async def login_test_stream(self, login_token: str):
+        """
+        Streams requiring authentication work very similarly to actions.
+        """
+        if login_token not in self.clients.keys():
+            raise HTTPException(status_code=403, detail='Forbidden')
+        yield b'Calling authenticated stream with login_token: ' + login_token.encode() + b'\n' + self.clients[login_token]().encode()
 
     def receive_message(self, message: Message):
         super().receive_message(message)

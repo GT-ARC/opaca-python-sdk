@@ -22,12 +22,13 @@ def action(_func: Optional[Callable] = None, *, name: str = '', description: str
     return decorator(_func) if _func else decorator
 
 
-def stream(*, mode: StreamDescription.Mode, name: str = '', description: str = ''):
+def stream(*, mode: StreamDescription.Mode, name: str = '', description: str = '', auth: bool = False):
     def decorator(func: Callable):
         func._is_stream = True
         func._mode = mode
         func._name = name
         func._description = description
+        func._auth = auth
         return func
 
     return decorator
@@ -69,9 +70,16 @@ def register_streams(agent: 'AbstractAgent') -> None:
         if not getattr(func, '_is_stream', False):
             continue
 
+        params, return_type = parse_params(func)
         stream_name = parse_name(func, name)
         description = parse_description(func)
         mode = getattr(func, '_mode', '')
+
+        if getattr(func, '_auth', False):
+            if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
+                       for name, p in list(params.items())):
+                raise TypeError(f'The stream {stream_name} was declared with auth and therefore needs to define '
+                                f'the parameter "login_token".')
 
         agent.add_stream(
             name=stream_name,

@@ -107,13 +107,15 @@ class AbstractAgent:
                 'callback': callback
             }
 
-    def invoke_stream(self, name: str, mode: StreamDescription.Mode):
+    def invoke_stream(self, name: str, mode: StreamDescription.Mode, login_token: str = None):
         """
         GET a stream response from this agent or POST a stream to it.
         """
         if not self.knows_stream(name):
             raise http_error(400, f'Unknown stream: {name}.')
         if mode == StreamDescription.Mode.GET:
+            if getattr(self.get_stream(name)['callback'], '_auth', False):
+                return self.get_stream(name)['callback'](login_token)
             return self.get_stream(name)['callback']()
         elif mode == StreamDescription.Mode.POST:
             raise http_error(500, f'Functionality for POSTing streams not yet implemented.')

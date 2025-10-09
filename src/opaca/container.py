@@ -86,7 +86,7 @@ class Container:
         """
         for agent in self.agents.values():
             if agent.knows_stream(name):
-                return agent.invoke_stream(name, mode)
+                return agent.invoke_stream(name, mode, login_token)
         raise http_error(400, f'Unknown stream: {name}.')
 
     def invoke_agent_stream(self, name: str, mode: StreamDescription.Mode, agent_id: str = '', login_token: str = None) -> bytes:
@@ -94,7 +94,7 @@ class Container:
         GET a stream from or POST a stream to the specified agent.
         """
         if self.has_agent(agent_id):
-            return self.get_agent(agent_id).invoke_stream(name, mode)
+            return self.get_agent(agent_id).invoke_stream(name, mode, login_token)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
     def send_message(self, agent_id: str, message: Message):
