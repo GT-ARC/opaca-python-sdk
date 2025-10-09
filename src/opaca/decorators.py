@@ -51,6 +51,8 @@ def register_actions(agent: 'AbstractAgent') -> None:
                        for name, p in list(params.items())):
                 raise TypeError(f'The action {action_name} was declared with auth and therefore needs to define '
                                 f'the parameter "login_token".')
+            if params["login_token"].type != "string":
+                raise TypeError(f'The parameter "login_token" in action {action_name} needs to be defined as a string.')
             params.pop("login_token")
 
         agent.add_action(
