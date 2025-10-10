@@ -47,13 +47,7 @@ def register_actions(agent: 'AbstractAgent') -> None:
         description = parse_description(func)
 
         if getattr(func, '_auth', False):
-            if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
-                       for name, p in list(params.items())):
-                raise TypeError(f'The action {action_name} was declared with auth and therefore needs to define '
-                                f'the parameter "login_token".')
-            if params["login_token"].type != "string":
-                raise TypeError(f'The parameter "login_token" in action {action_name} needs to be defined as a string.')
-            params.pop("login_token")
+            check_for_token(action_name, params)
 
         agent.add_action(
             name=action_name,
@@ -75,13 +69,11 @@ def register_streams(agent: 'AbstractAgent') -> None:
         params, return_type = parse_params(func)
         stream_name = parse_name(func, name)
         description = parse_description(func)
-        mode = getattr(func, '_mode', '')
 
         if getattr(func, '_auth', False):
-            if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
-                       for name, p in list(params.items())):
-                raise TypeError(f'The stream {stream_name} was declared with auth and therefore needs to define '
-                                f'the parameter "login_token".')
+            check_for_token(stream_name, params)
+
+        mode = getattr(func, '_mode', '')
 
         agent.add_stream(
             name=stream_name,
@@ -89,6 +81,15 @@ def register_streams(agent: 'AbstractAgent') -> None:
             mode=mode,
             callback=getattr(agent, name),
         )
+
+
+def check_for_token(name: str, params: Dict[str, Parameter]):
+    if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
+               for name, p in list(params.items())):
+        raise TypeError(f'The method {name} was declared with "auth" and therefore needs to define '
+                        f'the parameter "login_token".')
+    if params["login_token"].type != "string":
+        raise TypeError(f'The parameter "login_token" in method {name} needs to be defined as a string.')
 
 
 def function_returns_value(func: Callable) -> bool:
