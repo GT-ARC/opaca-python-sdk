@@ -68,7 +68,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Invoke an action on a specific agent.
         """
-        return await container.invoke_agent_action(action, agentId, parameters, ContainerLoginToken)
+        return await container.invoke_agent_action(action, agentId, parameters, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
     @app.get('/stream/{stream}', response_class=StreamingResponse)
@@ -76,7 +76,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         GET a stream from any agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET, login_token=ContainerLoginToken)
+        return make_stream_response(stream, StreamDescription.Mode.GET, login_token=ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
@@ -84,7 +84,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         GET a stream from the specified agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET, agent_id, ContainerLoginToken)
+        return make_stream_response(stream, StreamDescription.Mode.GET, agent_id, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
     @app.post('/login')
     async def handle_login(login: Login):
@@ -98,7 +98,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Performs a logout operation.
         """
-        return await container.handle_logout(ContainerLoginToken)
+        return await container.handle_logout(ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
     def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:
