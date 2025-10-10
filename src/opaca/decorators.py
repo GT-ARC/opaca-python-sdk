@@ -90,6 +90,7 @@ def check_for_token(name: str, params: Dict[str, Parameter]):
                         f'the parameter "login_token".')
     if params["login_token"].type != "string":
         raise TypeError(f'The parameter "login_token" in method {name} needs to be defined as a string.')
+    params.pop("login_token")
 
 
 def function_returns_value(func: Callable) -> bool:

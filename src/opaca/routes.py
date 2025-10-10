@@ -60,7 +60,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Invoke the specified action on any agent that knows the action.
         """
-        return await container.invoke_action(action, parameters, ContainerLoginToken)
+        return await container.invoke_action(action, parameters, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
     @app.post('/invoke/{action}/{agentId}', response_model=Any)
