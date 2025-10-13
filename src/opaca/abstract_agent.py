@@ -78,6 +78,8 @@ class AbstractAgent:
             else:
                 return callback(**parameters)
         except TypeError:
+            if "login_token" in parameters.keys():
+                parameters.pop("login_token")
             msg = f'Invalid action parameters. Provided: {parameters}, Required: {self.get_action(name)["parameters"]}'
             raise http_error(400, msg)
 
