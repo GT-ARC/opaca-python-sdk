@@ -1,4 +1,3 @@
-import uuid
 from time import sleep
 from typing import Dict, Callable
 
@@ -6,7 +5,7 @@ from fastapi import HTTPException
 
 from opaca import action, stream
 from opaca.abstract_agent import AbstractAgent
-from opaca.models import Message, StreamDescription, Parameter, Login, LoginMsg
+from opaca.models import Message, StreamDescription, Parameter, LoginMsg
 
 
 class SampleAgent(AbstractAgent):
