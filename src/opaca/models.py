@@ -33,7 +33,7 @@ class ActionDescription(BaseModel):
     description: str
     parameters: Dict[str, Parameter]
     result: Parameter
-    callback: Optional[Callable] = Field(None, exclude=True)
+    callback: Callable = Field(exclude=True)
 
 
 class StreamDescription(BaseModel):
@@ -45,7 +45,7 @@ class StreamDescription(BaseModel):
     name: str
     description: str = ''
     mode: Mode = Mode.GET
-    callback: Optional[Callable] = Field(None, exclude=True)
+    callback: Callable = Field(exclude=True)
 
 
 class ImageParameter(BaseModel):

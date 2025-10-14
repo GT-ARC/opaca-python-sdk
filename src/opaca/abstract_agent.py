@@ -113,8 +113,7 @@ class AbstractAgent:
             raise http_error(400, f'Unknown stream: {name}.')
 
         if mode == StreamDescription.Mode.GET:
-            callback = self.get_stream(name).callback
-            return callback()
+            return self.get_stream(name).callback()
         elif mode == StreamDescription.Mode.POST:
             raise http_error(500, f'Functionality for POSTing streams not yet implemented.')
         else:
