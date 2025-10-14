@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr, field_validator
 from typing import Dict, List, Any, Optional, Callable
 from enum import Enum
 
@@ -31,7 +31,7 @@ class ActionDescription(BaseModel):
     description: str
     parameters: Dict[str, Parameter]
     result: Parameter
-    callback: Callable = Field(exclude=True)
+    callback: Any = Field(exclude=True)
 
 
 class StreamDescription(BaseModel):
@@ -43,7 +43,7 @@ class StreamDescription(BaseModel):
     name: str
     description: str = ''
     mode: Mode = Mode.GET
-    callback: Callable = Field(exclude=True)
+    callback: Any = Field(exclude=True)
 
 
 class ImageParameter(BaseModel):
