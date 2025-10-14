@@ -2,7 +2,7 @@ from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
 import uuid
 
-from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter
+from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg
 from .utils import http_error
 from .decorators import register_actions, register_streams
 
@@ -58,7 +58,7 @@ class AbstractAgent:
         if self.knows_action(name):
             del self.actions[name]
 
-    async def invoke_action(self, name: str, parameters: Dict[str, Any]) -> Optional[Any]:
+    async def invoke_action(self, name: str, parameters: Dict[str, Any], login_token: str) -> Optional[Any]:
         """
         Invoke action on this agent.
         """
@@ -68,11 +68,18 @@ class AbstractAgent:
             action = self.get_action(name)
             callback = action['callback']
 
+            if getattr(callback, '_auth', False):
+                if not login_token:
+                    raise http_error(401, 'Missing credentials')
+                parameters['login_token'] = login_token
+
             if iscoroutinefunction(callback):
                 return await callback(**parameters)
             else:
                 return callback(**parameters)
         except TypeError:
+            if "login_token" in parameters.keys():
+                parameters.pop("login_token")
             msg = f'Invalid action parameters. Provided: {parameters}, Required: {self.get_action(name)["parameters"]}'
             raise http_error(400, msg)
 
@@ -102,13 +109,15 @@ class AbstractAgent:
                 'callback': callback
             }
 
-    def invoke_stream(self, name: str, mode: StreamDescription.Mode):
+    def invoke_stream(self, name: str, mode: StreamDescription.Mode, login_token: str = None):
         """
         GET a stream response from this agent or POST a stream to it.
         """
         if not self.knows_stream(name):
             raise http_error(400, f'Unknown stream: {name}.')
         if mode == StreamDescription.Mode.GET:
+            if getattr(self.get_stream(name)['callback'], '_auth', False):
+                return self.get_stream(name)['callback'](login_token)
             return self.get_stream(name)['callback']()
         elif mode == StreamDescription.Mode.POST:
             raise http_error(500, f'Functionality for POSTing streams not yet implemented.')
@@ -141,6 +150,22 @@ class AbstractAgent:
         """
         if self.container is not None:
             self.container.unsubscribe_channel(channel, self)
+
+    async def handle_login(self, login_msg: LoginMsg):
+        """
+        Implement this method in your agent to handle login requests for any external services.
+
+        The loginMsg contains the 'username' and 'password' provided by the user, as well as a random 'token' as
+        an uuid, which can be used to associate retrieved login details with this specific user.
+        """
+        pass
+
+    async def handle_logout(self, login_token: str):
+        """
+        Implement this method in your agent to handle logout requests for any external services.
+        Use the provided login_token to identify the user.
+        """
+        pass
 
     def make_description(self) -> AgentDescription:
         return AgentDescription(

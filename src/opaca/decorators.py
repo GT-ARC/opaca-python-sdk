@@ -11,22 +11,24 @@ if TYPE_CHECKING:
     from .abstract_agent import AbstractAgent
 
 
-def action(_func: Optional[Callable] = None, *, name: str = '', description: str = ''):
+def action(_func: Optional[Callable] = None, *, name: str = '', description: str = '', auth: bool = False):
     def decorator(func: Callable):
         func._is_action = True
         func._name = name
         func._description = description
+        func._auth = auth
         return func
 
     return decorator(_func) if _func else decorator
 
 
-def stream(*, mode: StreamDescription.Mode, name: str = '', description: str = ''):
+def stream(*, mode: StreamDescription.Mode, name: str = '', description: str = '', auth: bool = False):
     def decorator(func: Callable):
         func._is_stream = True
         func._mode = mode
         func._name = name
         func._description = description
+        func._auth = auth
         return func
 
     return decorator
@@ -43,6 +45,9 @@ def register_actions(agent: 'AbstractAgent') -> None:
         params, return_type = parse_params(func)
         action_name = parse_name(func, name)
         description = parse_description(func)
+
+        if getattr(func, '_auth', False):
+            check_for_token(action_name, params)
 
         agent.add_action(
             name=action_name,
@@ -61,8 +66,13 @@ def register_streams(agent: 'AbstractAgent') -> None:
         if not getattr(func, '_is_stream', False):
             continue
 
+        params, return_type = parse_params(func)
         stream_name = parse_name(func, name)
         description = parse_description(func)
+
+        if getattr(func, '_auth', False):
+            check_for_token(stream_name, params)
+
         mode = getattr(func, '_mode', '')
 
         agent.add_stream(
@@ -71,6 +81,16 @@ def register_streams(agent: 'AbstractAgent') -> None:
             mode=mode,
             callback=getattr(agent, name),
         )
+
+
+def check_for_token(name: str, params: Dict[str, Parameter]):
+    if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
+               for name, p in list(params.items())):
+        raise TypeError(f'The method {name} was declared with "auth" and therefore needs to define '
+                        f'the parameter "login_token".')
+    if params["login_token"].type != "string":
+        raise TypeError(f'The parameter "login_token" in method {name} needs to be defined as a string.')
+    params.pop("login_token")
 
 
 def function_returns_value(func: Callable) -> bool:
