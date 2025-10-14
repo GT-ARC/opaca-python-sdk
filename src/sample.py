@@ -1,8 +1,11 @@
 from time import sleep
+from typing import Dict, Callable
+
+from fastapi import HTTPException
 
 from opaca import action, stream
 from opaca.abstract_agent import AbstractAgent
-from opaca.models import Message, StreamDescription, Parameter
+from opaca.models import Message, StreamDescription, Parameter, LoginMsg
 
 
 class SampleAgent(AbstractAgent):
@@ -13,6 +16,7 @@ class SampleAgent(AbstractAgent):
 
     def __init__(self, **kwargs):
         super(SampleAgent, self).__init__(**kwargs)
+        self.clients: Dict[str, Callable] = {}
         self.add_action(
             name='SampleAction',
             description='Returns a simple string acknowledging the action\'s execution with the given parameters.',
@@ -26,6 +30,8 @@ class SampleAgent(AbstractAgent):
             mode=StreamDescription.Mode.GET,
             callback=self.sample_stream
         )
+
+    # Actions
 
     def sample_action(self, param1: str, param2: int) -> str:
         """
@@ -56,6 +62,8 @@ class SampleAgent(AbstractAgent):
         print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
         return separator.join(array)
 
+    # Streams
+
     async def sample_stream(self):
         """
         Returns a sample stream value.
@@ -68,6 +76,40 @@ class SampleAgent(AbstractAgent):
         Returns a sample stream value.
         """
         yield b'sampleStream data'
+
+    # Container Login
+
+    async def handle_login(self, login_msg: LoginMsg):
+        """
+        This method should construct a login token specific client for an external api requiring auth.
+        """
+        # Perform external API login
+        self.clients[login_msg.token] = lambda: f'Logged in as user: {login_msg.login.username}'
+
+    async def handle_logout(self, login_token: str):
+        """
+        This method should remove the callable client associated to the login token.
+        """
+        del self.clients[login_token]
+
+    @action(auth=True)
+    async def login_test(self, login_token: str) -> str:
+        """
+        After a successful login, use the constructed client to perform some action.
+        It is important that actions with enabled authentication define the "login_token" parameter.
+        """
+        if login_token not in self.clients.keys():
+            raise HTTPException(status_code=403, detail='Forbidden')
+        return f'Calling authenticated client with login_token: {login_token}\n{self.clients[login_token]()}'
+
+    @stream(mode=StreamDescription.Mode.GET, auth=True)
+    async def login_test_stream(self, login_token: str):
+        """
+        Streams requiring authentication work very similarly to actions.
+        """
+        if login_token not in self.clients.keys():
+            raise HTTPException(status_code=403, detail='Forbidden')
+        yield b'Calling authenticated stream with login_token: ' + login_token.encode() + b'\n' + self.clients[login_token]().encode()
 
     def receive_message(self, message: Message):
         super().receive_message(message)

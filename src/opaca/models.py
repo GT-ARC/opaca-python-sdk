@@ -92,3 +92,13 @@ class ContainerDescription(BaseModel):
     owner: str = ''
     runningSince: str
     connectivity: None = None
+
+
+class Login(BaseModel):
+    username: str
+    password: str
+
+
+class LoginMsg(BaseModel):
+    token: str
+    login: 'Login'
