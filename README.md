@@ -29,14 +29,14 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
     #### requirements.txt
     
-    ```
+    ```pycon
     opaca
     # Other required packages
     ```
     
     #### Dockerfile
     
-    ```
+    ```docker
     FROM python:3.12-slim
     WORKDIR /app
     COPY requirements.txt .
@@ -47,7 +47,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
     
     #### resources/container.json
     
-    ```
+    ```json
     {
       "imageName": "<your-container-name>"
     }
@@ -55,8 +55,9 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
     
     #### src/main.py
     
-    ```
+    ```pycon
     from opaca import Container, run
+    from my_agent import MyAgent
     
     # Create a container based on the container.json file
     container = Container("../resources/container.json")
@@ -73,7 +74,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
     #### src/my_agent.py
 
-    ```
+    ```pycon
     from opaca import AbstractAgent, action
     
     class MyAgent(AbstractAgent):
@@ -101,13 +102,13 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
 1. Build your container image from the root directory by using the `Dockerfile` you created: 
 
-    ```
+    ```shell
     docker build -t <your-container-name> .
     ```
 
 2. Next, make sure you have a running OPACA Runtime Platform instance. The easiest way to achieve this is by using the published docker image from the [OPACA-Core](https://github.com/gt-arc/opaca-core) repository. (**Note**: Find out your local IP by running `ipconfig` on Windows or `ifconfig` on Linux. `localhost` will not work!)
 
-    ```
+    ```shell
     docker container run -d -p 8000:8000 \
    -v /var/run/docker.sock:/var/run/docker.sock \
    -e PUBLIC_URL=http://<YOUR_IP>:8000 \
@@ -116,7 +117,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
 
 3. Finally, you can deploy your container to the running OPACA Platform. For this, you can use the integrated Swagger UI, which will be available at `http://<YOUR_IP>:8000/swagger-ui/index.html` once the OPACA Runtime Platform has been started. Navigate to the `POST /containers` endpoint, click "Try it out", replace the request body with the following content and then click "Execute":
     
-    ```
+    ```json
     {
       "image": {
         "imageName": "<your-container-name>"
@@ -142,7 +143,7 @@ Here is an example for a custom data type `MyType`:
 
 In your agent class:
 
-```
+```pycon
 from pydantic import BaseModel
 from typing import List
 
@@ -154,7 +155,7 @@ class MyType(BaseModel):
 
 In the `resources/container.json` file:
 
-```
+```json
 {
   "imageName": "<your-container-name>",
   "definitions": {
@@ -164,7 +165,7 @@ In the `resources/container.json` file:
       "type": "object",
       "properties": {
         "var_a": {
-          "description": "Optional description of var_a.",,
+          "description": "Optional description of var_a.",
           "type": "string"
         },
         "var_b": {
@@ -195,9 +196,9 @@ Here is an example for an environment variable `MY_API_KEY`:
 
 In your `resources/container.json` file:
 
-```
+```json
 {
-  "imageName": "<your-container-name>,
+  "imageName": "<your-container-name>",
   "parameters": [
     {
         "name": "MY_API_KEY",
@@ -212,10 +213,10 @@ In your `resources/container.json` file:
 
 During the container deployment, your request body to the `POST /containers` would then look like this:
 
-```
+```json
 {
   "image": {
-    "imageName": "<your-container-name>,
+    "imageName": "<your-container-name>",
     "parameters": [
       {
         "name": "MY_API_KEY",
@@ -239,6 +240,92 @@ During the container deployment, your request body to the `POST /containers` wou
 - `required`: Whether the environment variable is required or not. If `true`, the environment variable must be passed during the container deployment. Otherwise the container deployment will fail.
 - `confidential`: If `true`, the value of this environment variable will never be logged or exposed within any OPACA API calls.
 - `defaultValue`: The default value of the environment variable. Set to `null` if the parameter is required.
+
+## Custom Routes
+
+You can also define custom routes for your container, by manually creating a FastAPI app with the `create_routes()` function and adding custom routes to it. Remember that you then need to pass your custom FastAPI app to the `run()` function.
+
+```pycon
+from opaca import Container, run, create_routes
+from my_agent import MyAgent
+
+# Create a container based on the container.json file
+container = Container("../resources/container.json")
+
+# Initialize the agents. The container must be passed to the agent, to automatically register the agent on the container.
+MyAgent(container=container, agent_id='MyAgent')
+
+# Create a pre-configured FastAPI app and add custom routes to it.
+app = create_routes("my-agent", container)
+
+@app.get("/my-custom-route")
+def my_custom_route():
+    return "Hello World!"
+
+# Run the container. This will start a FastAPI server and expose endpoints required for communication within the OPACA framework.
+if __name__ == "__main__":
+    run(container, app=app)
+```
+
+## Authentication
+
+It might be useful for your use-case to implement authentication for your agent, so it can determine the identity of the user who is calling the agent. This might be applicable when impelementing agents, connecting to external APIs, requiring user credentials. The OPACA framework defines a so-called "Container Login", in which an identifiable user token (uuid) is sent with each request. This token can then be used in your agent logic and to restrict specific actions to users with valid credentials, or make external API calls with the provided credentials.
+
+### Container Login Routes
+
+To differentiate between different users, you first need to implement the following two functions in your agent:
+
+```pycon
+self.clients: Dict[str, Callable] = {}
+
+async def handle_login(self, login_msg: LoginMsg):
+    # LoginMsg has the following attributes:
+    # - login.token - a unique token generated by your container
+    # - login.login.username - The username a user has entered
+    # - login.login.password - The password a user has entered
+    self.clients[login.token] = lambda: f'Logged in as user: {login.login.username}'
+
+async def handle_logout(self, login_token: str):
+    # Here you can handle logout operation, e.g., deleting clients bound to the token
+    del self.clients[login_token]
+```
+
+The `handle_login()` function will be called whenever a user attempts a container login. Currently, the only supported authentication method is username and password. It lies in your responsibility to handle the password hashing and comparison if necessary. This function does not need to return anything, but you could attempt an external API login, check if it succeeded, and if not, raise an `HttpException(401, "Invalid Credentials")` error.
+
+The `handle_logout()` function is optional to implement, but it is strongly recommended to implement it, as it allows you to clean up any resources associated with the user.
+
+### Actions with Authentication
+
+Once you have implemented the `handle_login()` and `handle_logout()` functions, you can now declare actions as `@action(auth=True)`, which will indicate to the action, that any attempt without a `login_token` shall automatically raise an `HttpException(401, "Missing Credentials")` error.
+
+**Important**: Any actions you do decide to declare as requiring authentication, **must** include the parameter `login_token` in the function definition. This value will then hold the `login_token`, that was sent with each request following a container login of the OPACA platform in the header field `ContainerLoginToken`. If no `login_token` parameter was found in an action with `auth=True`, the container will raise an exception during startup. The `login_token` does not need to be provided via the request body, as it will be automatically extracted from the correct header field.
+
+Following is an example of an action that requires authentication:
+
+```pycon
+@action(auth=True)
+async def login_test(self, login_token: str)
+    # Check if the login_token has been sent previously with a successful login attempt.
+    # Otherwise, raise an appropriate exception.
+    # The agent container will automatically handle missing requests with a missing login_token
+    if login_token not in self.clients.keys():
+        raise HTTPException(status_code=403, detail='Forbidden')
+    return f'Calling authenticated client with login_token: {login_token}\n{self.clients[login_token]()}'
+```
+
+Please note that it is in your own responsibility to check if the provided login_token matches the same token that was sent during the call to the `handle_login()` function.
+
+### Streams with Authentication
+
+Streams can be declared with `@stream(mode=StreamDescription.Mode.GET, auth=True)`, expecting the parameter `login_token` to be present in the function definition as well. The overall structure is very similar to actions.
+
+```pycon
+@stream(mode=StreamDescription.Mode.GET, auth=True)
+async def login_test_stream(self, login_token: str):
+    if login_token not in self.clients.keys():
+        raise HTTPException(status_code=403, detail='Forbidden')
+    yield b'Calling authenticated stream with login_token: ' + login_token.encode() + b'\n' + self.clients[login_token]().encode()
+```
 
 ## Additional Information
 

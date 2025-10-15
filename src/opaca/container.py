@@ -1,10 +1,12 @@
 import os
+import uuid
 from datetime import datetime
 from typing import Dict, List, Any
 import json
 
 from .abstract_agent import AbstractAgent
-from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription
+from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
+    Login
 from .utils import http_error
 
 
@@ -61,38 +63,38 @@ class Container:
     def has_agent(self, agent_id) -> bool:
         return agent_id in self.agents
 
-    async def invoke_action(self, name: str, parameters: Dict[str, Any]) -> str:
+    async def invoke_action(self, name: str, parameters: Dict[str, Any], login_token: str = None):
         """
         Invoke action on any agent that knows the action.
         """
         for agent in self.agents.values():
             if agent.knows_action(name):
-                return await agent.invoke_action(name, parameters)
+                return await agent.invoke_action(name, parameters, login_token)
         raise http_error(400, f'Unknown action: {name}.')
 
-    async def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any]):
+    async def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any], login_token: str = None):
         """
         Invoke action on the specified agent.
         """
         if self.has_agent(agent_id):
-            return await self.get_agent(agent_id).invoke_action(name, parameters)
+            return await self.get_agent(agent_id).invoke_action(name, parameters, login_token)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
-    def invoke_stream(self, name: str, mode: StreamDescription.Mode):
+    def invoke_stream(self, name: str, mode: StreamDescription.Mode, login_token: str = None):
         """
         GET a stream from or POST a stream to any agent that knows the stream.
         """
         for agent in self.agents.values():
             if agent.knows_stream(name):
-                return agent.invoke_stream(name, mode)
+                return agent.invoke_stream(name, mode, login_token)
         raise http_error(400, f'Unknown stream: {name}.')
 
-    def invoke_agent_stream(self, name: str, mode: StreamDescription.Mode, agent_id: str = '') -> bytes:
+    def invoke_agent_stream(self, name: str, mode: StreamDescription.Mode, agent_id: str = '', login_token: str = None) -> bytes:
         """
         GET a stream from or POST a stream to the specified agent.
         """
         if self.has_agent(agent_id):
-            return self.get_agent(agent_id).invoke_stream(name, mode)
+            return self.get_agent(agent_id).invoke_stream(name, mode, login_token)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
     def send_message(self, agent_id: str, message: Message):
@@ -130,6 +132,19 @@ class Container:
             return
         for agent in self.channels[channel]:
             agent.receive_message(message)
+
+    async def handle_login(self, login: Login) -> str:
+        token = str(uuid.uuid4())
+        for agent in self.agents.values():
+            await agent.handle_login(LoginMsg(token=token, login=login))
+        return token
+
+    async def handle_logout(self, login_token: str = None) -> bool:
+        if not login_token:
+            return False
+        for agent in self.agents.values():
+            await agent.handle_logout(login_token)
+        return True
 
     def get_description(self) -> ContainerDescription:
         return ContainerDescription(

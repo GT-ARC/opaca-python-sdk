@@ -1,9 +1,10 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Annotated
 from fastapi import FastAPI
+from fastapi.params import Header
 from starlette.responses import StreamingResponse
 
 from .container import Container
-from .models import Message, AgentDescription, ContainerDescription, StreamDescription
+from .models import Message, AgentDescription, ContainerDescription, StreamDescription, Login
 
 
 def create_routes(title: str, container: Container) -> FastAPI:
@@ -55,43 +56,57 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/invoke/{action}', response_model=Any)
-    async def invoke_action(action: str, parameters: Dict[str, Any]):
+    async def invoke_action(action: str, parameters: Dict[str, Any], ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Invoke the specified action on any agent that knows the action.
         """
-        return await container.invoke_action(action, parameters)
+        return await container.invoke_action(action, parameters, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
     @app.post('/invoke/{action}/{agentId}', response_model=Any)
-    async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any]):
+    async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any], ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Invoke an action on a specific agent.
         """
-        return await container.invoke_agent_action(action, agentId, parameters)
+        return await container.invoke_agent_action(action, agentId, parameters, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
     @app.get('/stream/{stream}', response_class=StreamingResponse)
-    async def get_stream(stream: str):
+    async def get_stream(stream: str, ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         GET a stream from any agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET)
+        return make_stream_response(stream, StreamDescription.Mode.GET, login_token=ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
-    async def get_agent_stream(stream: str, agent_id: str):
+    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         GET a stream from the specified agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET, agent_id)
+        return make_stream_response(stream, StreamDescription.Mode.GET, agent_id, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+
+    @app.post('/login')
+    async def handle_login(login: Login):
+        """
+        Provide login credentials required for actions requiring authentication.
+        """
+        return await container.handle_login(login)
+
+    @app.post('/logout')
+    async def handle_logout(ContainerLoginToken: Annotated[str | None, Header()] = None):
+        """
+        Performs a logout operation.
+        """
+        return await container.handle_logout(ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
-    def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None) -> StreamingResponse:
+    def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:
         """
         Converts the byte stream from the stream invocation into the correct response format.
         """
-        result = container.invoke_stream(name, mode) if agent_id is None \
-            else container.invoke_agent_stream(name, mode, agent_id)
+        result = container.invoke_stream(name, mode, login_token) if agent_id is None \
+            else container.invoke_agent_stream(name, mode, agent_id, login_token)
         return StreamingResponse(result, media_type='application/octet-stream')
 
     return app
