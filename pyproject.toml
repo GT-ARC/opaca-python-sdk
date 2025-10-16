@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opaca"
-version = "0.0.5"
+version = "0.0.6"
 description = "Provides helpful tools for building your own OPACA Agent Container."
 authors = [
     {name="Oskar Felix Kupke", email="oskarfelix.kupke@gt-arc.com"},
