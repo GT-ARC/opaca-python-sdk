@@ -9,6 +9,7 @@ from .decorators import register_actions, register_streams
 if TYPE_CHECKING:
     from .container import Container
 
+
 class AbstractAgent:
 
     def __init__(self, container: 'Container', agent_id: str = '', agent_type: str = '', description: Optional[str] = None):
@@ -16,8 +17,8 @@ class AbstractAgent:
         self.agent_id: str = agent_id if agent_id else str(uuid.uuid4())
         self.agent_type: str = agent_type or self.__class__.__name__
         self.description: str = description or getdoc(self.__class__)
-        self.actions: Dict[str, Dict[str, Any]] = {}
-        self.streams: Dict[str, Dict[str, Any]] = {}
+        self.actions: Dict[str, ActionDescription] = {}
+        self.streams: Dict[str, StreamDescription] = {}
         self.messages: List[Message] = []
 
         self.container.add_agent(self)
@@ -43,13 +44,13 @@ class AbstractAgent:
         Add an action to the publicly visible list of actions this agent can perform.
         """
         if not self.knows_action(name):
-            self.actions[name] = {
-                'name': name,
-                'description': description,
-                'parameters': parameters,
-                'result': result,
-                'callback': callback
-            }
+            self.actions[name] = ActionDescription(
+                name=name,
+                description=description,
+                parameters=parameters,
+                result=result,
+                callback=callback,
+            )
 
     def remove_action(self, name: str):
         """
@@ -64,9 +65,10 @@ class AbstractAgent:
         """
         if not self.knows_action(name):
             raise http_error(400, f'Unknown action: {name}.')
+
         try:
             action = self.get_action(name)
-            callback = action['callback']
+            callback = action.callback
 
             if getattr(callback, '_auth', False):
                 if not login_token:
@@ -77,6 +79,7 @@ class AbstractAgent:
                 return await callback(**parameters)
             else:
                 return callback(**parameters)
+
         except TypeError:
             if "login_token" in parameters.keys():
                 parameters.pop("login_token")
@@ -102,12 +105,12 @@ class AbstractAgent:
         Add a stream to this agent's action publicly visible list of streams.
         """
         if not self.knows_stream(name):
-            self.streams[name] = {
-                'name': name,
-                'description': description,
-                'mode': mode,
-                'callback': callback
-            }
+            self.streams[name] = StreamDescription(
+                name=name,
+                description=description,
+                mode=mode,
+                callback=callback,
+            )
 
     def invoke_stream(self, name: str, mode: StreamDescription.Mode, login_token: str = None):
         """
@@ -115,10 +118,11 @@ class AbstractAgent:
         """
         if not self.knows_stream(name):
             raise http_error(400, f'Unknown stream: {name}.')
+
         if mode == StreamDescription.Mode.GET:
-            if getattr(self.get_stream(name)['callback'], '_auth', False):
-                return self.get_stream(name)['callback'](login_token)
-            return self.get_stream(name)['callback']()
+            if getattr(self.get_stream(name).callback, '_auth', False):
+                return self.get_stream(name).callback(login_token)
+            return self.get_stream(name).callback()
         elif mode == StreamDescription.Mode.POST:
             raise http_error(500, f'Functionality for POSTing streams not yet implemented.')
         else:
@@ -172,23 +176,6 @@ class AbstractAgent:
             agentId=self.agent_id,
             agentType=self.agent_type,
             description=self.description,
-            actions=[self.make_action_description(action_name) for action_name in self.actions],
-            streams=[self.make_stream_description(stream_name) for stream_name in self.streams]
-        )
-
-    def make_action_description(self, action_name: str):
-        action = self.get_action(action_name)
-        return ActionDescription(
-            name=action['name'],
-            description=action['description'],
-            parameters=action['parameters'],
-            result=action['result']
-        )
-
-    def make_stream_description(self, stream_name: str):
-        stream = self.get_stream(stream_name)
-        return StreamDescription(
-            name=stream['name'],
-            description=stream['description'],
-            mode=stream['mode']
+            actions=[action for action in self.actions.values()],
+            streams=[stream for stream in self.streams.values()],
         )

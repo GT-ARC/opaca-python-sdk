@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Dict, List, Any, Optional
 from enum import Enum
 
@@ -31,15 +31,19 @@ class ActionDescription(BaseModel):
     description: str
     parameters: Dict[str, Parameter]
     result: Parameter
+    callback: Any = Field(exclude=True)
 
 
 class StreamDescription(BaseModel):
+
     class Mode(Enum):
         GET = 'GET'
         POST = 'POST'
+
     name: str
-    description: str
-    mode: Mode
+    description: str = ''
+    mode: Mode = Mode.GET
+    callback: Any = Field(exclude=True)
 
 
 class ImageParameter(BaseModel):
@@ -59,9 +63,11 @@ class AgentDescription(BaseModel):
 
 
 class ImageDescription(BaseModel):
+
     class PortDescription(BaseModel):
         protocol: str
         description: str = ''
+
     imageName: str
     requires: List[str] = []
     provides: List[str] = []
