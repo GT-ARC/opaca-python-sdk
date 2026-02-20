@@ -11,10 +11,14 @@ class AsyncOpacaClient:
         self.url: str = url
         self.token: str | None = None
         self.container_tokens: dict[str, str] = {}
-        self._client: httpx.AsyncClient = httpx.AsyncClient()
+        self._lock: asyncio.Lock = asyncio.Lock()
 
-    async def aclose(self) -> None:
-        await self._client.aclose()
+    async def __aenter__(self) -> 'AsyncOpacaClient':
+        await self._lock.acquire()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        self._lock.release()
 
     ### AUTHENTICATION ###
 
@@ -120,13 +124,13 @@ class AsyncOpacaClient:
     ### PRIVATE HELPER METHODS ###
 
     async def _get(self, path: str, timeout=10) -> httpx.Response:
-        async with self._client as client:
+        async with httpx.AsyncClient() as client:
             response = await client.get(f'{self.url}{path}', headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
     async def _post(self, path: str, body: Any | None = None, timeout=10) -> httpx.Response:
-        async with self._client as client:
+        async with httpx.AsyncClient() as client:
             response = await client.post(f'{self.url}{path}', json=body, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
@@ -138,13 +142,13 @@ class AsyncOpacaClient:
             return response
 
     async def _delete(self, path: str, timeout=10) -> httpx.Response:
-        async with self._client as client:
+        async with httpx.AsyncClient() as client:
             response = await client.delete(f'{self.url}{path}', headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
     async def _request(self, method: str, path: str, body: Any | None = None, timeout=10) -> httpx.Response:
-        async with self._client as client:
+        async with httpx.AsyncClient() as client:
             response = await client.request(method, f'{self.url}{path}', json=body, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
