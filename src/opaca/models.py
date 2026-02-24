@@ -71,6 +71,7 @@ class ImageDescription(BaseModel):
     imageName: str
     requires: List[str] = []
     provides: List[str] = []
+    url: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     version: Optional[str] = None
