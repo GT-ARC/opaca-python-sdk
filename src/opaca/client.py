@@ -26,15 +26,17 @@ class AsyncOpacaClient:
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._post('/login', body=body)
         self.token = response.text
+        return self.token
 
     async def renew_token(self) -> None:
         response = await self._get('/token')
         self.token = response.text
+        return self.token
 
     async def container_login(self, container_id: str, username: str, password: str) -> str:
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._post(f'/containers/login/{container_id}', body=body)
-        self.container_tokens[container_id] = str(response.text)
+        self.container_tokens[container_id] = response.text
         return self.container_tokens[container_id]
 
     async def container_logout(self, container_id: str) -> bool:
