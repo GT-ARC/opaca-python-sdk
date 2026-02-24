@@ -31,15 +31,17 @@ class AsyncOpacaClient:
         response = await self._get('/token')
         self.token = response.text
 
-    async def container_login(self, container_id: str, username: str, password: str) -> None:
+    async def container_login(self, container_id: str, username: str, password: str) -> str:
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._post(f'/containers/login/{container_id}', body=body)
         self.container_tokens[container_id] = str(response.text)
+        return self.container_tokens[container_id]
 
-    async def container_logout(self, container_id: str) -> None:
-        if container_id not in self.container_tokens: return
-        await self._post(f'/containers/logout/{container_id}')
+    async def container_logout(self, container_id: str) -> bool:
+        if container_id not in self.container_tokens: return False
+        response = await self._post(f'/containers/logout/{container_id}')
         del self.container_tokens[container_id]
+        return response.json()
 
     ### CONTAINERS ###
 
