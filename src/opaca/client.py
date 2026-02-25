@@ -2,7 +2,8 @@ import httpx
 import asyncio
 from typing import Any
 
-from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest
+from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
+    Message, Event
 
 
 class AsyncOpacaClient:
@@ -115,15 +116,29 @@ class AsyncOpacaClient:
         response = await self._post('/connections/notify', body=connection)
         return response.json()
 
+    ### MESSAGES ###
+
+    async def send_message(self, agent_id: str, message: Message, container_id: str | None = None) -> None:
+        path = f'/send/{agent_id}' + (f'?containerId={container_id}' if container_id else '')
+        await self._post(path, body=message.model_dump(mode='json'))
+
+    async def broadcast(self, channel: str, message: Message, container_id: str | None = None) -> None:
+        path = f'/broadcast/{channel}' + (f'?containerId={container_id}' if container_id else '')
+        await self._post(path, body=message.model_dump(mode='json'))
+
     ### INFO ###
 
-    async def get_info(self) -> PlatformInfo:
+    async def info(self) -> PlatformInfo:
         response = await self._get('/info')
         return PlatformInfo.model_validate(response.json())
 
-    async def get_config(self) -> dict[str, Any]:
+    async def config(self) -> dict[str, Any]:
         response = await self._get('/config')
         return response.json()
+
+    async def history(self) -> list[Event]:
+        response = await self._get('/history')
+        return [Event.model_validate(event) for event in response.json()]
 
     ### PRIVATE HELPER METHODS ###
 

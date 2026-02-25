@@ -123,3 +123,21 @@ class ConnectionRequest(BaseModel):
     url: str
     connectBack: bool = False
     token: str | None = None
+
+
+class Event(BaseModel):
+
+    class EventType(Enum):
+        CALL = "CALL"
+        FORWARD = "FORWARD"
+        SUCCESS = "SUCCESS"
+        ERROR = "ERROR"
+
+    id: str
+    timestamp: int
+    eventType: EventType
+    route: Optional[str] = None
+    senderId: Optional[str] = None
+    receiver: Optional[str] = None
+    statusCode: Optional[int] = None
+    relatedId: Optional[str] = None
