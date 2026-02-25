@@ -2,6 +2,8 @@ import httpx
 import asyncio
 from typing import Any
 
+from httpx import QueryParams
+
 from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
     Message, Event
 
@@ -85,15 +87,15 @@ class AsyncOpacaClient:
             self,
             action: str,
             agent_id: str | None = None,
+            args: dict[str, Any] | None = None,
             container_id: str | None = None,
-            args: dict[str, Any] | None = None
+            forward: bool = True
     ) -> Any | None:
-        path = (f'/invoke/{action}'
-            + (f'/{agent_id}' if agent_id else '')
-            + (f'?containerId={container_id}' if container_id else ''))
         if args is None:
             args = {}
-        response = await self._post(path, body=args)
+        path = f'/invoke/{action}' + (f'/{agent_id}' if agent_id else '')
+        params = QueryParams(containerId=container_id, forward=forward)
+        response = await self._post(path, body=args, params=params)
         return response.json()
 
     ### CONNECTIONS ###
@@ -118,57 +120,63 @@ class AsyncOpacaClient:
 
     ### MESSAGES ###
 
-    async def send_message(self, agent_id: str, message: Message, container_id: str | None = None) -> None:
-        path = f'/send/{agent_id}' + (f'?containerId={container_id}' if container_id else '')
-        await self._post(path, body=message.model_dump(mode='json'))
+    async def send_message(self, agent_id: str, message: Message, container_id: str | None = None, forward: bool = True) -> None:
+        await self._post(
+            f'/send/{agent_id}',
+            body=message.model_dump(mode='json'),
+            params=QueryParams(containerId=container_id, forward=forward)
+        )
 
-    async def broadcast(self, channel: str, message: Message, container_id: str | None = None) -> None:
-        path = f'/broadcast/{channel}' + (f'?containerId={container_id}' if container_id else '')
-        await self._post(path, body=message.model_dump(mode='json'))
+    async def broadcast(self, channel: str, message: Message, container_id: str | None = None, forward: bool = True) -> None:
+        await self._post(
+            f'/broadcast/{channel}',
+            body=message.model_dump(),
+            params=QueryParams(containerId=container_id, forward=forward)
+        )
 
     ### INFO ###
 
-    async def info(self) -> PlatformInfo:
+    async def get_info(self) -> PlatformInfo:
         response = await self._get('/info')
         return PlatformInfo.model_validate(response.json())
 
-    async def config(self) -> dict[str, Any]:
+    async def get_config(self) -> dict[str, Any]:
         response = await self._get('/config')
         return response.json()
 
-    async def history(self) -> list[Event]:
+    async def get_history(self) -> list[Event]:
         response = await self._get('/history')
         return [Event.model_validate(event) for event in response.json()]
 
     ### PRIVATE HELPER METHODS ###
 
-    async def _get(self, path: str, timeout=10) -> httpx.Response:
+    async def _get(self, path: str, params: QueryParams | None = None, timeout=10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
-            response = await client.get(f'{self.url}{path}', headers=self._headers(), timeout=timeout)
+            response = await client.get(f'{self.url}{path}', params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
-    async def _post(self, path: str, body: Any | None = None, timeout=10) -> httpx.Response:
+    async def _post(self, path: str, body: Any | None = None, params: QueryParams | None = None, timeout=10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
-            response = await client.post(f'{self.url}{path}', json=body, headers=self._headers(), timeout=timeout)
+            response = await client.post(f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
-    async def _put(self, path: str, body: Any | None = None, timeout=10) -> httpx.Response:
+    async def _put(self, path: str, body: Any | None = None, params: QueryParams | None = None, timeout=10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
-            response = await client.put(f'{self.url}{path}', json=body, headers=self._headers(), timeout=timeout)
+            response = await client.put(f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
-    async def _delete(self, path: str, timeout=10) -> httpx.Response:
+    async def _delete(self, path: str, params: QueryParams | None = None, timeout=10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
-            response = await client.delete(f'{self.url}{path}', headers=self._headers(), timeout=timeout)
+            response = await client.delete(f'{self.url}{path}', params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
-    async def _request(self, method: str, path: str, body: Any | None = None, timeout=10) -> httpx.Response:
+    async def _request(self, method: str, path: str, body: Any | None = None, params: QueryParams | None = None, timeout=10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
-            response = await client.request(method, f'{self.url}{path}', json=body, headers=self._headers(), timeout=timeout)
+            response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
