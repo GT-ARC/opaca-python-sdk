@@ -1,6 +1,6 @@
 import httpx
 import asyncio
-from typing import Any
+from typing import Any, AsyncIterator
 
 from httpx import QueryParams
 
@@ -94,7 +94,7 @@ class AsyncOpacaClient:
         if args is None:
             args = {}
         path = f'/invoke/{action}' + (f'/{agent_id}' if agent_id else '')
-        params = QueryParams(containerId=container_id, forward=forward)
+        params = _build_query_params(containerId=container_id, forward=forward)
         response = await self._post(path, body=args, params=params)
         return response.json()
 
@@ -121,18 +121,14 @@ class AsyncOpacaClient:
     ### MESSAGES ###
 
     async def send_message(self, agent_id: str, message: Message, container_id: str | None = None, forward: bool = True) -> None:
-        await self._post(
-            f'/send/{agent_id}',
-            body=message.model_dump(mode='json'),
-            params=QueryParams(containerId=container_id, forward=forward)
-        )
+        body = message.model_dump(mode='json')
+        params = _build_query_params(containerId=container_id, forward=forward)
+        await self._post(f'/send/{agent_id}', body=body, params=params)
 
     async def broadcast(self, channel: str, message: Message, container_id: str | None = None, forward: bool = True) -> None:
-        await self._post(
-            f'/broadcast/{channel}',
-            body=message.model_dump(),
-            params=QueryParams(containerId=container_id, forward=forward)
-        )
+        body = message.model_dump(mode='json')
+        params = _build_query_params(containerId=container_id, forward=forward)
+        await self._post(f'/broadcast/{channel}', body=body, params=params)
 
     ### INFO ###
 
@@ -150,31 +146,31 @@ class AsyncOpacaClient:
 
     ### PRIVATE HELPER METHODS ###
 
-    async def _get(self, path: str, params: QueryParams | None = None, timeout=10) -> httpx.Response:
+    async def _get(self, path: str, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
             response = await client.get(f'{self.url}{path}', params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
-    async def _post(self, path: str, body: Any | None = None, params: QueryParams | None = None, timeout=10) -> httpx.Response:
+    async def _post(self, path: str, body: Any | None = None, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
             response = await client.post(f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
-    async def _put(self, path: str, body: Any | None = None, params: QueryParams | None = None, timeout=10) -> httpx.Response:
+    async def _put(self, path: str, body: Any | None = None, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
             response = await client.put(f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
-    async def _delete(self, path: str, params: QueryParams | None = None, timeout=10) -> httpx.Response:
+    async def _delete(self, path: str, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
             response = await client.delete(f'{self.url}{path}', params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
 
-    async def _request(self, method: str, path: str, body: Any | None = None, params: QueryParams | None = None, timeout=10) -> httpx.Response:
+    async def _request(self, method: str, path: str, body: Any | None = None, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
             response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
@@ -185,3 +181,14 @@ class AsyncOpacaClient:
         if self.token:
             headers['Authorization'] = f'Bearer {self.token}'
         return headers
+
+
+def _build_query_params(**kwargs) -> QueryParams | None:
+    filtered_params = {
+        param: value
+        for param, value in kwargs.items()
+        if value is not None
+    }
+    if len(filtered_params) == 0:
+        return None
+    return QueryParams(**filtered_params)
