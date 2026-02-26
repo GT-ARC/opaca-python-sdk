@@ -21,17 +21,27 @@ class AsyncOpacaClient:
     ### AUTHENTICATION ###
 
     async def platform_login(self, username: str, password: str) -> None:
+        """
+        Acquire a login token from the platform. The token is also cached within
+        the client itself and automatically added to all request headers.
+        """
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._request('POST', '/login', body=body)
         self.token = response.text
         return self.token
 
     async def renew_token(self) -> None:
+        """
+        Update the cached platform login token.
+        """
         response = await self._request('GET', '/token')
         self.token = response.text
         return self.token
 
     async def container_login(self, container_id: str, username: str, password: str) -> str:
+        """
+        Acquires a login token from a container. The token is also cached internally.
+        """
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._request('POST', f'/containers/login/{container_id}', body=body)
         self.container_tokens[container_id] = response.text
