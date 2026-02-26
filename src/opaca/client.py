@@ -1,11 +1,15 @@
 import httpx
 import asyncio
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Iterable, AsyncIterable
 
 from httpx import QueryParams
 
 from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
     Message, Event
+
+
+# custom type hint for POST streams
+StreamContent = Iterable[bytes] | AsyncIterable[bytes] | None
 
 
 class AsyncOpacaClient:
@@ -14,14 +18,6 @@ class AsyncOpacaClient:
         self.url: str = url
         self.token: str | None = None
         self.container_tokens: dict[str, str] = {}
-        self._lock: asyncio.Lock = asyncio.Lock()
-
-    async def __aenter__(self) -> 'AsyncOpacaClient':
-        await self._lock.acquire()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        self._lock.release()
 
     ### AUTHENTICATION ###
 
@@ -98,6 +94,31 @@ class AsyncOpacaClient:
         response = await self._request('POST', path, body=args, params=params)
         return response.json()
 
+    async def get_stream(
+            self,
+            stream: str,
+            agent_id: str | None = None,
+            container_id: str | None = None,
+            forward: bool = True
+    ) -> AsyncIterator[bytes]:
+        path = f'/stream/{stream}' + (f'/{agent_id}' if agent_id else '')
+        params = _build_query_params(containerId=container_id, forward=forward)
+        async for chunk in self._stream('GET', path, params=params):
+            yield chunk
+
+    async def post_stream(
+            self,
+            stream: str,
+            content: StreamContent = None,
+            agent_id: str | None = None,
+            container_id: str | None = None,
+            forward: bool = True
+    ) -> AsyncIterator[bytes]:
+        path = f'/stream/{stream}' + (f'/{agent_id}' if agent_id else '')
+        params = _build_query_params(containerId=container_id, forward=forward)
+        async for chunk in self._stream('POST', path, content=content, params=params):
+            yield chunk
+
     ### CONNECTIONS ###
 
     async def get_connections(self) -> list[str]:
@@ -151,6 +172,13 @@ class AsyncOpacaClient:
             response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
+
+    async def _stream(self, method: str, path: str, content: StreamContent = None, params: QueryParams | None = None, timeout: float = 10) -> AsyncIterator[bytes]:
+        async with httpx.AsyncClient() as client:
+            async with client.stream(method, f'{self.url}{path}', content=content, params=params, headers=self._headers(), timeout=timeout) as response:
+                response.raise_for_status()
+                async for chunk in response.aiter_bytes():
+                    yield chunk
 
     def _headers(self) -> dict[str, str] | None:
         headers = {'Content-Type': 'application/json; charset=UTF-8'}
