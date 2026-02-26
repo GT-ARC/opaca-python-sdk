@@ -27,60 +27,60 @@ class AsyncOpacaClient:
 
     async def platform_login(self, username: str, password: str) -> None:
         body = Login(username=username, password=password).model_dump(mode='json')
-        response = await self._post('/login', body=body)
+        response = await self._request('POST', '/login', body=body)
         self.token = response.text
         return self.token
 
     async def renew_token(self) -> None:
-        response = await self._get('/token')
+        response = await self._request('GET', '/token')
         self.token = response.text
         return self.token
 
     async def container_login(self, container_id: str, username: str, password: str) -> str:
         body = Login(username=username, password=password).model_dump(mode='json')
-        response = await self._post(f'/containers/login/{container_id}', body=body)
+        response = await self._request('POST', f'/containers/login/{container_id}', body=body)
         self.container_tokens[container_id] = response.text
         return self.container_tokens[container_id]
 
     async def container_logout(self, container_id: str) -> bool:
         if container_id not in self.container_tokens: return False
-        response = await self._post(f'/containers/logout/{container_id}')
+        response = await self._request('POST', f'/containers/logout/{container_id}')
         del self.container_tokens[container_id]
         return response.json()
 
     ### CONTAINERS ###
 
     async def get_containers(self) -> list[ContainerDescription]:
-        response = await self._get('/containers')
+        response = await self._request('GET', '/containers')
         return [ContainerDescription.model_validate(container)
                 for container in response.json()]
 
     async def post_container(self, post_container: PostContainer) -> str:
         body = post_container.model_dump(mode='json')
-        response = await self._post('/containers', body=body)
+        response = await self._request('POST', '/containers', body=body)
         return response.text
 
     async def put_container(self, post_container: PostContainer) -> str:
         body = post_container.model_dump(mode='json')
-        response = await self._put('/containers', body=body)
+        response = await self._request('PUT', '/containers', body=body)
         return response.text
 
     async def delete_container(self, container_id: str) -> bool:
-        response = await self._delete(f'/containers/{container_id}')
+        response = await self._request('DELETE', f'/containers/{container_id}')
         return response.json()
 
     async def post_container_notify(self, container_id: str) -> bool:
-        response = await self._post(f'/containers/notify', body=container_id)
+        response = await self._request('POST', f'/containers/notify', body=container_id)
         return response.json()
 
     ### AGENTS ###
 
     async def get_agents(self) -> list[AgentDescription]:
-        response = await self._get('/agents')
+        response = await self._request('GET', '/agents')
         return [AgentDescription.model_validate(agent) for agent in response.json()]
 
     async def get_agent(self, agent_id: str) -> AgentDescription:
-        response = await self._get(f'/agents/{agent_id}')
+        response = await self._request('GET', f'/agents/{agent_id}')
         return AgentDescription.model_validate(response.json())
 
     async def invoke(
@@ -95,18 +95,18 @@ class AsyncOpacaClient:
             args = {}
         path = f'/invoke/{action}' + (f'/{agent_id}' if agent_id else '')
         params = _build_query_params(containerId=container_id, forward=forward)
-        response = await self._post(path, body=args, params=params)
+        response = await self._request('POST', path, body=args, params=params)
         return response.json()
 
     ### CONNECTIONS ###
 
     async def get_connections(self) -> list[str]:
-        response = await self._get(f'{self.url}/connections')
+        response = await self._request('GET', f'{self.url}/connections')
         return response.json()
 
     async def post_connection(self, connection: str, connect_back: bool = False) -> bool:
         body = {'url': connection, 'connectBack': connect_back, 'token': None}
-        response = await self._post('/connections', body=body)
+        response = await self._request('POST', '/connections', body=body)
         return response.json()
 
     async def delete_connection(self, connection: str, connect_back: bool = False) -> bool:
@@ -115,7 +115,7 @@ class AsyncOpacaClient:
         return response.json()
 
     async def post_connection_notify(self, connection: str) -> bool:
-        response = await self._post('/connections/notify', body=connection)
+        response = await self._request('POST', '/connections/notify', body=connection)
         return response.json()
 
     ### MESSAGES ###
@@ -123,52 +123,28 @@ class AsyncOpacaClient:
     async def send_message(self, agent_id: str, message: Message, container_id: str | None = None, forward: bool = True) -> None:
         body = message.model_dump(mode='json')
         params = _build_query_params(containerId=container_id, forward=forward)
-        await self._post(f'/send/{agent_id}', body=body, params=params)
+        await self._request('POST', f'/send/{agent_id}', body=body, params=params)
 
     async def broadcast(self, channel: str, message: Message, container_id: str | None = None, forward: bool = True) -> None:
         body = message.model_dump(mode='json')
         params = _build_query_params(containerId=container_id, forward=forward)
-        await self._post(f'/broadcast/{channel}', body=body, params=params)
+        await self._request('POST', f'/broadcast/{channel}', body=body, params=params)
 
     ### INFO ###
 
     async def get_info(self) -> PlatformInfo:
-        response = await self._get('/info')
+        response = await self._request('GET', '/info')
         return PlatformInfo.model_validate(response.json())
 
     async def get_config(self) -> dict[str, Any]:
-        response = await self._get('/config')
+        response = await self._request('GET', '/config')
         return response.json()
 
     async def get_history(self) -> list[Event]:
-        response = await self._get('/history')
+        response = await self._request('GET', '/history')
         return [Event.model_validate(event) for event in response.json()]
 
     ### PRIVATE HELPER METHODS ###
-
-    async def _get(self, path: str, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f'{self.url}{path}', params=params, headers=self._headers(), timeout=timeout)
-            response.raise_for_status()
-            return response
-
-    async def _post(self, path: str, body: Any | None = None, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
-            response.raise_for_status()
-            return response
-
-    async def _put(self, path: str, body: Any | None = None, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
-        async with httpx.AsyncClient() as client:
-            response = await client.put(f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
-            response.raise_for_status()
-            return response
-
-    async def _delete(self, path: str, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
-        async with httpx.AsyncClient() as client:
-            response = await client.delete(f'{self.url}{path}', params=params, headers=self._headers(), timeout=timeout)
-            response.raise_for_status()
-            return response
 
     async def _request(self, method: str, path: str, body: Any | None = None, params: QueryParams | None = None, timeout: float = 10) -> httpx.Response:
         async with httpx.AsyncClient() as client:
