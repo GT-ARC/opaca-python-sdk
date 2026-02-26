@@ -1,5 +1,4 @@
 import httpx
-import asyncio
 from typing import Any, AsyncIterator, Iterable, AsyncIterable
 
 from httpx import QueryParams
@@ -8,8 +7,8 @@ from .models import ContainerDescription, PlatformInfo, PostContainer, Login, Ag
     Message, Event
 
 
-# custom type hint for POST streams
-StreamContent = Iterable[bytes] | AsyncIterable[bytes] | None
+# Custom type hint for POST streams
+StreamContent = Iterable[bytes] | AsyncIterable[bytes] | bytes | None
 
 
 class AsyncOpacaClient:
@@ -101,6 +100,10 @@ class AsyncOpacaClient:
             container_id: str | None = None,
             forward: bool = True
     ) -> AsyncIterator[bytes]:
+        """
+        Returns an async iterator over a byte stream. You can collect the data
+        using an ``async for`` loop.
+        """
         path = f'/stream/{stream}' + (f'/{agent_id}' if agent_id else '')
         params = _build_query_params(containerId=container_id, forward=forward)
         async for chunk in self._stream('GET', path, params=params):
@@ -114,6 +117,12 @@ class AsyncOpacaClient:
             container_id: str | None = None,
             forward: bool = True
     ) -> AsyncIterator[bytes]:
+        """
+        The stream content that is posted can be any iterable byte stream data.
+
+        Returns an async iterator over a byte stream. You can collect the data
+        using an ``async for`` loop.
+        """
         path = f'/stream/{stream}' + (f'/{agent_id}' if agent_id else '')
         params = _build_query_params(containerId=container_id, forward=forward)
         async for chunk in self._stream('POST', path, content=content, params=params):
@@ -122,7 +131,7 @@ class AsyncOpacaClient:
     ### CONNECTIONS ###
 
     async def get_connections(self) -> list[str]:
-        response = await self._request('GET', f'{self.url}/connections')
+        response = await self._request('GET', '/connections')
         return response.json()
 
     async def post_connection(self, connection: str, connect_back: bool = False) -> bool:
