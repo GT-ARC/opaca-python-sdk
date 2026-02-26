@@ -30,8 +30,7 @@ class Container:
         """
         try:
             with open(json_file, encoding='utf-8') as f:
-                contents = json.load(f)
-                return ImageDescription(**contents)
+                return ImageDescription.model_validate(json.load(f))
         except TypeError:
             raise http_error(500, 'Failed to load image description.')
 
