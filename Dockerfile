@@ -1,10 +1,9 @@
-# syntax=docker/dockerfile:1
-
+FROM ghcr.io/astral-sh/uv:latest AS uv
 FROM python:3.10-slim
-WORKDIR /app
-RUN pip install --upgrade pip
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
+COPY --from=uv /uv /uvx /bin/
 
-ENTRYPOINT [ "python", "src/main.py" ]
+WORKDIR /app
+COPY . .
+RUN uv sync --no-install-project
+
+ENTRYPOINT [ "uv", "run", "--no-project", "src/main.py" ]
