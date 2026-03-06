@@ -11,7 +11,7 @@ All changes to the opaca package will be documented in this file.
   - Agents can define a `handle_login` and `handle_logout` method.
   - The action decorator now accepts an `auth` parameter. If set to `True`, the action will need to define `login_token: str` as a parameter, which will provide the current login_token of the request user, after successful authentication.
   - During `handle_login`, a username, password, and an uuid are provided. You can then use these information to authenticate to an external service and manage credentials within your custom container.
-  - An example implementation can be found in the [sample agent](example/src/sample.py).
+  - An example implementation can be found in the [sample agent](src/sample.py).
 - Added an example in [README.md](README.md#custom-routes) implementing custom endpoints to your container.
 
 ### Changed
@@ -21,7 +21,7 @@ All changes to the opaca package will be documented in this file.
 ### Fixed
 
 - Fixed an issue for dependency resolution for third party packages when installing `opaca`.
-- Fixed an incorrect container image path in [main.py](example/src/main.py).
+- Fixed an incorrect container image path in [main.py](src/main.py).
 
 
 ## [0.0.5] - 2025-08-27

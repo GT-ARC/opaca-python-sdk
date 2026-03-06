@@ -10,91 +10,15 @@ You can install the package by running `pip install opaca` and then `import opac
 
 ## Developing new Agents
 
-Following is a minimal example of how to develop a new agent by using the OPACA Python SDK.
+For an example of how to create new agents, have a look at the files in the `example/` directory. There you can find a full example of how to run an agent container with docker.
 
-1. Start by creating a new directory for your project and add the following files to it:
+ ### `@action` Decorator - Additional Notes
 
-    ```
-    your_project/
-    ├── src/
-    │   ├── my_agent.py
-    │   └── main.py
-    ├── resources/
-    │   └── container.json
-    ├── Dockerfile
-    └── requirements.txt
-    ```
-
-2. Then add the following basic contents to these files:
-
-    #### requirements.txt
-    
-    ```pycon
-    opaca
-    # Other required packages
-    ```
-    
-    #### Dockerfile
-    
-    ```docker
-    FROM python:3.12-slim
-    WORKDIR /app
-    COPY requirements.txt .
-    RUN pip install -r requirements.txt
-    COPY . .
-    CMD ["python", "main.py"]
-    ```
-    
-    #### resources/container.json
-    
-    ```json
-    {
-      "imageName": "<your-container-name>"
-    }
-    ```
-    
-    #### src/main.py
-
-    ```pycon
-    from src import Container, run
-    from my_agent import MyAgent
-    
-    # Create a container based on the container.json file
-    container = Container("../resources/container.json")
-    
-    # Initialize the agents. The container must be passed to the agent, to automatically register the agent on the container.
-    MyAgent(container=container, agent_id='MyAgent')
-    
-    # Run the container. This will start a FastAPI server and expose endpoints required for communication within the OPACA framework.
-    if __name__ == "__main__":
-        run(container)
-    ```
-
-3. Finally, define the actual agent class in `src/my_agent.py` by creating a new class inheriting from `opaca.AbstractAgent`. Then add a class method for each action you want to expose and use the `@action` decorator to register it as an OPACA action.
-
-    #### src/my_agent.py
-
-    ```pycon
-    from src import AbstractAgent, action
-    
-    class MyAgent(AbstractAgent):
-    
-        def __init__(self, **kwargs):
-            super(MyAgent, self).__init__(**kwargs)
-   
-        @action
-        def add(x: float, y: float) -> float:
-            """Returns the sum of numbers x and y."""
-            return x + y
-    ```
-
-    **`@action` Decorator - Additional Notes**:
-
-   - It is required for **all input and output parameters to be annotated with type hints**. The type hints are later resolved into JSON schema to be used within HTTP requests.
-   - Action methods need to be defined as **non-static**, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.
-   - You can also use type hints from the `typing` library to define the input and output parameters. This includes types such as `List`, `Dict`, `Tuple`, `Optional`, etc.
-   - Agent actions can also be defined `async`.
-   - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible. As a workaround, you can always fall back to using the `self.add_action()` in the agent constructor to manually register an action. A reference implementation can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
+- It is required for **all input and output parameters to be annotated with type hints**. The type hints are later resolved into JSON schema to be used within HTTP requests.
+- Action methods need to be defined as **non-static**, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.
+- You can also use type hints from the `typing` library to define the input and output parameters. This includes types such as `List`, `Dict`, `Tuple`, `Optional`, etc.
+- Agent actions can also be defined `async`.
+- If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible. As a workaround, you can always fall back to using the `self.add_action()` in the agent constructor to manually register an action. A reference implementation can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
 
 ## Testing & Deployment
 
