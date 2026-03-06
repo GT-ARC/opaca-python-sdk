@@ -54,9 +54,9 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
     ```
     
     #### src/main.py
-    
+
     ```pycon
-    from opaca import Container, run
+    from src import Container, run
     from my_agent import MyAgent
     
     # Create a container based on the container.json file
@@ -75,7 +75,7 @@ Following is a minimal example of how to develop a new agent by using the OPACA 
     #### src/my_agent.py
 
     ```pycon
-    from opaca import AbstractAgent, action
+    from src import AbstractAgent, action
     
     class MyAgent(AbstractAgent):
     
@@ -246,7 +246,7 @@ During the container deployment, your request body to the `POST /containers` wou
 You can also define custom routes for your container, by manually creating a FastAPI app with the `create_routes()` function and adding custom routes to it. Remember that you then need to pass your custom FastAPI app to the `run()` function.
 
 ```pycon
-from opaca import Container, run, create_routes
+from src import Container, run, create_routes
 from my_agent import MyAgent
 
 # Create a container based on the container.json file
