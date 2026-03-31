@@ -1,8 +1,6 @@
 # OPACA API Python Implementation
 
-This module provides an implementation of the OPACA API in Python, using FastAPI to provide the different REST routes.
-The 'agents' in this module are not 'real' agents in the sense that they run in their own thread, but just objects that
-react to the REST routes.
+This module provides an implementation of the OPACA API in Python, using FastAPI to provide the different REST routes. The 'agents' in this module are not 'real' agents in the sense that they run in their own thread, but just objects that react to the REST routes.
 
 ## Installation
 
@@ -10,21 +8,21 @@ You can install the package by running `pip install opaca` and then `import opac
 
 ## Developing new Agents
 
-For an example of how to create new agents, have a look at the files in the `example/` directory. There you can find a full example of how to run an agent container with docker.
+For an example of how to create new agents, take a look at the files in the `example/` directory. There you can find a full example setup of how to run an agent container with docker.
 
- ### `@action` Decorator - Additional Notes
+### `@action` Decorator - Additional Notes
 
 - It is required for **all input and output parameters to be annotated with type hints**. The type hints are later resolved into JSON schema to be used within HTTP requests.
 - Action methods need to be defined as **non-static**, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.
 - You can also use type hints from the `typing` library to define the input and output parameters. This includes types such as `List`, `Dict`, `Tuple`, `Optional`, etc.
 - Agent actions can also be defined `async`.
-- If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible. As a workaround, you can always fall back to using the `self.add_action()` in the agent constructor to manually register an action. A reference implementation can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
+- If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible. As a workaround, you can always fall back to using the `self.add_action()` in the agent constructor to manually register an action. A reference implementation can be found in [example/src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/example/src/sample.py).
 
 ## Testing & Deployment
 
 ### Build and Deploy the Agent Container (recommended)
 
-1. Build your container image from the root directory by using the `Dockerfile` you created: 
+1. In your project's root directory, build the container using docker:
 
     ```shell
     docker build -t <your-container-name> .
@@ -39,8 +37,8 @@ For an example of how to create new agents, have a look at the files in the `exa
    -e PLATFORM_ENVIRONMENT=DOCKER ghcr.io/gt-arc/opaca/opaca-platform:main
     ```
 
-3. Finally, you can deploy your container to the running OPACA Platform. For this, you can use the integrated Swagger UI, which will be available at `http://<YOUR_IP>:8000/swagger-ui/index.html` once the OPACA Runtime Platform has been started. Navigate to the `POST /containers` endpoint, click "Try it out", replace the request body with the following content and then click "Execute":
-    
+3. Finally, you can deploy your container to the running OPACA Platform. For this, you can use the integrated Swagger UI, which is available at `http://<YOUR_IP>:8000/swagger-ui/index.html` once the OPACA Runtime Platform has been started. Navigate to the `POST /containers` endpoint, click "Try it out", replace the request body with the following content and then click "Execute":
+
     ```json
     {
       "image": {
@@ -49,11 +47,11 @@ For an example of how to create new agents, have a look at the files in the `exa
     }
     ```
 
-    If an uuid is returned, the container has been deployed successfully. You can then test your implemented function by calling the `POST /invoke/{action}` route with your implemented action name and input parameters in the request body.
+   If a UUID is returned, the container has been deployed successfully. You can then test your implemented function by calling the `POST /invoke/{action}` route with your implemented action name and input parameters in the request body.
 
-    If you find a problem with your container and want to test it again after fixing, you can paste the payload from `POST /container` to `PUT /container`. This will automatically DELETE and then POST a new container (effectively updating the old container), whereas calling POST again would start a second instance.
+   If you find a problem with your container and want to test it again after fixing, you can paste the payload from `POST /container` to `PUT /container`. This will automatically DELETE and then POST a new container (effectively updating the old container), whereas calling POST again would start a second instance.
 
-    An implemented example can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
+   An implemented example can be found in [src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/src/sample.py).
 
 ### Run the Agent Container Locally
 
@@ -125,11 +123,11 @@ In your `resources/container.json` file:
   "imageName": "<your-container-name>",
   "parameters": [
     {
-        "name": "MY_API_KEY",
-        "type": "string",
-        "required": true,
-        "confidential": true,
-        "defaultValue": null
+      "name": "MY_API_KEY",
+      "type": "string",
+      "required": true,
+      "confidential": true,
+      "defaultValue": null
     }
   ]
 }
@@ -174,7 +172,7 @@ from src import Container, run, create_routes
 from my_agent import MyAgent
 
 # Create a container based on the container.json file
-container = Container("../resources/container.json")
+container = Container("resources/container.json")
 
 # Initialize the agents. The container must be passed to the agent, to automatically register the agent on the container.
 MyAgent(container=container, agent_id='MyAgent')
@@ -193,13 +191,13 @@ if __name__ == "__main__":
 
 ## Authentication
 
-It might be useful for your use-case to implement authentication for your agent, so it can determine the identity of the user who is calling the agent. This might be applicable when impelementing agents, connecting to external APIs, requiring user credentials. The OPACA framework defines a so-called "Container Login", in which an identifiable user token (uuid) is sent with each request. This token can then be used in your agent logic and to restrict specific actions to users with valid credentials, or make external API calls with the provided credentials.
+It might be useful for your use-case to implement authentication for your agent, so it can determine the identity of the user who is calling the agent. This might be applicable when impelementing agents, connecting to external APIs, requiring user credentials. The OPACA framework defines a so-called "Container Login", in which an identifiable user token (UUID) is sent with each request. This token can then be used in your agent logic and to restrict specific actions to users with valid credentials, or make external API calls with the provided credentials.
 
 ### Container Login Routes
 
 To differentiate between different users, you first need to implement the following two functions in your agent:
 
-```pycon
+```python
 self.clients: Dict[str, Callable] = {}
 
 async def handle_login(self, login_msg: LoginMsg):
@@ -254,7 +252,7 @@ async def login_test_stream(self, login_token: str):
 ## Additional Information
 
 * All agent classes should extend the `AbstractAgent` class. Make sure to pass a `Container` object to the agent.
-* In the agent's constructor `__init__`, you can register actions the agents can perform using the `add_action()` method from the super-class. 
+* In the agent's constructor `__init__`, you can register actions the agents can perform using the `add_action()` method from the super-class.
 * Alternatively, you can expose actions by using the `@action` decorator on a method.
 * Similarly, stream responses can be defined using the `@stream` decorator or the `add_stream()` method in the constructor `__init__`.
 * Decorators will use the method name as the action name in PascalCase, the docstring as description, and use type hints to determine the input and output parameter types.
