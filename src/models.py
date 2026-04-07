@@ -1,6 +1,10 @@
 from pydantic import BaseModel, Field
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Iterable, AsyncIterable
 from enum import Enum
+
+
+# Custom type hint for POST streams
+StreamContent = Iterable[bytes] | AsyncIterable[bytes] | bytes | None
 
 
 class Message(BaseModel):

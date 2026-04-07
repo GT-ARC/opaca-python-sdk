@@ -91,14 +91,14 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Provide login credentials required for actions requiring authentication.
         """
-        return await container.handle_login(login)
+        return container.handle_login(login)
 
     @app.post('/logout')
     async def handle_logout(ContainerLoginToken: Annotated[str | None, Header()] = None):
         """
         Performs a logout operation.
         """
-        return await container.handle_logout(ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+        return container.handle_logout(ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
 
     def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:

@@ -1,14 +1,9 @@
 import httpx
 from typing import Any, AsyncIterator, Iterable, AsyncIterable
-
 from httpx import QueryParams
 
 from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
-    Message, Event
-
-
-# Custom type hint for POST streams
-StreamContent = Iterable[bytes] | AsyncIterable[bytes] | bytes | None
+    Message, Event, StreamContent
 
 
 class AsyncOpacaClient:
