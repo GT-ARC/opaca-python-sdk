@@ -189,6 +189,27 @@ if __name__ == "__main__":
     run(container, app=app)
 ```
 
+## The AsyncOpacaClient
+
+This module also provides an async client to easily interact with an OPACA runtime platform via its API. The client automatically resolves the data fetched from each endpoint into the corresponding model classes.
+
+### Example
+
+```python
+from opaca import AsyncOpacaClient
+from opaca.models import PlatformInfo
+
+# Create a new client object for an RP listening on localhost port 8000
+client = AsyncOpacaClient('http://localhost:8000')
+
+async def get_info() -> PlatformInfo:
+   # Log in to the RP, if necessary. The token is stored in the client object.
+   await client.platform_login('username', 'password')
+   
+   # Fetch the RP's info.
+   return await client.get_info()
+```
+
 ## Authentication
 
 It might be useful for your use-case to implement authentication for your agent, so it can determine the identity of the user who is calling the agent. This might be applicable when impelementing agents, connecting to external APIs, requiring user credentials. The OPACA framework defines a so-called "Container Login", in which an identifiable user token (UUID) is sent with each request. This token can then be used in your agent logic and to restrict specific actions to users with valid credentials, or make external API calls with the provided credentials.
