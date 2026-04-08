@@ -168,7 +168,7 @@ During the container deployment, your request body to the `POST /containers` wou
 You can also define custom routes for your container, by manually creating a FastAPI app with the `create_routes()` function and adding custom routes to it. Remember that you then need to pass your custom FastAPI app to the `run()` function.
 
 ```pycon
-from src import Container, run, create_routes
+from opaca import Container, run, create_routes
 from my_agent import MyAgent
 
 # Create a container based on the container.json file
