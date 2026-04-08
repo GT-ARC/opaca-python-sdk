@@ -2,6 +2,18 @@
 
 All changes to the opaca package will be documented in this file.
 
+## [0.0.7] - 2026-04-08
+
+### Added
+
+- `handle_login` and `handle_logout` methods can now be declared either  async or non-async.
+
+### Changed
+
+- Switched build system from `pip`/`requirements.txt` to `uv` for faster and more reliable dependency management.
+- Reorganized project structure: package source files moved to `opaca/` directory; example files moved to `example/` with their own minimal requirements.
+- Improved type hint coverage and general code readability across core modules.
+
 ## [0.0.6] - 2025-10-16
 
 ### Added
