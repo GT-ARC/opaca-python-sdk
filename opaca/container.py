@@ -75,7 +75,13 @@ class Container:
                 return await agent.invoke_action(name, parameters, login_token)
         raise http_error(400, f'Unknown action: {name}.')
 
-    async def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any], login_token: str = None):
+    async def invoke_agent_action(
+            self,
+            name: str,
+            agent_id: str,
+            parameters: Dict[str, Any],
+            login_token: str = None
+    ) -> Any:
         """
         Invoke action on the specified agent.
         """
@@ -83,7 +89,12 @@ class Container:
             return await self.get_agent(agent_id).invoke_action(name, parameters, login_token)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
-    def invoke_stream(self, name: str, mode: StreamDescription.Mode, login_token: str = None):
+    def invoke_stream(
+            self,
+            name: str,
+            mode: StreamDescription.Mode,
+            login_token: str = None
+    ) -> StreamContent:
         """
         GET a stream from or POST a stream to any agent that knows the stream.
         """
@@ -106,7 +117,7 @@ class Container:
             return self.get_agent(agent_id).invoke_stream(name, mode, login_token)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
-    def send_message(self, agent_id: str, message: Message):
+    def send_message(self, agent_id: str, message: Message) -> None:
         """
         Send a message to the specified agent.
         """
@@ -114,7 +125,7 @@ class Container:
         if agent is not None:
             agent.receive_message(message)
 
-    def subscribe_channel(self, channel: str, agent: AbstractAgent):
+    def subscribe_channel(self, channel: str, agent: AbstractAgent) -> None:
         """
         Subscribe an agent to the specified channel.
         """
@@ -123,7 +134,7 @@ class Container:
         if agent not in self.channels[channel]:
             self.channels[channel].append(agent)
 
-    def unsubscribe_channel(self, channel: str, agent: AbstractAgent):
+    def unsubscribe_channel(self, channel: str, agent: AbstractAgent) -> None:
         """
         Unsubscribe an agent from the specified channel.
         """
@@ -133,7 +144,7 @@ class Container:
             return
         self.channels[channel].remove(agent)
 
-    def broadcast(self, channel: str, message: Message):
+    def broadcast(self, channel: str, message: Message) -> None:
         """
         Broadcast a message to all agents subscribing to the specified channel.
         """
