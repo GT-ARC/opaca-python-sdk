@@ -1,6 +1,7 @@
 import os
 import uuid
 from datetime import datetime, timezone
+from inspect import iscoroutinefunction
 from typing import Dict, List, Any, Optional
 import json
 
@@ -141,17 +142,24 @@ class Container:
         for agent in self.channels[channel]:
             agent.receive_message(message)
 
-    def handle_login(self, login: Login) -> str:
+    async def handle_login(self, login: Login) -> str:
         token = str(uuid.uuid4())
         for agent in self.agents.values():
-            agent.handle_login(LoginMsg(token=token, login=login))
+            msg = LoginMsg(token=token, login=login)
+            if iscoroutinefunction(agent.handle_login):
+                await agent.handle_login(msg)
+            else:
+                agent.handle_login(msg)
         return token
 
-    def handle_logout(self, login_token: str = None) -> bool:
+    async def handle_logout(self, login_token: str = None) -> bool:
         if not login_token:
             return False
         for agent in self.agents.values():
-            agent.handle_logout(login_token)
+            if iscoroutinefunction(agent.handle_logout):
+                await agent.handle_logout(login_token)
+            else:
+                agent.handle_logout(login_token)
         return True
 
     def get_description(self) -> ContainerDescription:
