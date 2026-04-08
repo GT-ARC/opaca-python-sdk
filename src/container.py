@@ -168,8 +168,8 @@ class Container:
     def get_agent_descriptions(self) -> List[AgentDescription]:
         return [agent.make_description() for agent in self.agents.values()]
 
-    def get_running_since(self):
-        return f'{self.started_at.isoformat(timespec="milliseconds")}Z'
+    def get_running_since(self) -> str:
+        return self.started_at.isoformat(timespec="milliseconds")
 
     def get_arguments(self, include_confidential: bool = True) -> Dict[str, Any]:
         return { param.name: os.getenv(param.name, param.defaultValue)
