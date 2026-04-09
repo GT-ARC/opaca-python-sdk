@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opaca"
-version = "0.0.6"
+version = "0.0.7"
 description = "Provides helpful tools for building your own OPACA Agent Container."
 authors = [
     {name="Oskar Felix Kupke", email="oskarfelix.kupke@gt-arc.com"},
@@ -20,7 +20,8 @@ dependencies = [
     "fastapi>=0.119.0",
     "uvicorn[standard]>=0.37.0",
     "starlette>=0.48.0",
-    "httpx>=0.28.1"
+    "httpx>=0.28.1",
+    "build>=1.4.2",
 ]
 
 [project.urls]
@@ -28,4 +29,6 @@ Repository = "https://github.com/GT-ARC/opaca-python-sdk"
 Changelog = "https://github.com/GT-ARC/opaca-python-sdk/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["opaca"]
+namespaces = false
