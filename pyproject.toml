@@ -30,3 +30,5 @@ Changelog = "https://github.com/GT-ARC/opaca-python-sdk/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["opaca"]
+namespaces = false
