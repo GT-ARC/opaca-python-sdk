@@ -24,28 +24,30 @@ For an example of how to create new agents, take a look at the files in the `exa
 
 1. In your project's root directory, build the container using docker:
 
-    ```shell
-    docker build -t <your-container-name> .
-    ```
+```shell
+docker build -t <your-container-name> .
+```
 
 2. Next, make sure you have a running OPACA Runtime Platform instance. The easiest way to achieve this is by using the published docker image from the [OPACA-Core](https://github.com/gt-arc/opaca-core) repository. (**Note**: Find out your local IP by running `ipconfig` on Windows or `ifconfig` on Linux. `localhost` will not work!)
 
-    ```shell
-    docker container run -d -p 8000:8000 \
-   -v /var/run/docker.sock:/var/run/docker.sock \
-   -e PUBLIC_URL=http://<YOUR_IP>:8000 \
-   -e PLATFORM_ENVIRONMENT=DOCKER ghcr.io/gt-arc/opaca/opaca-platform:main
-    ```
+Note: The currently required version of the platform is **0.5**.
+
+```shell
+docker container run -d -p 8000:8000 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e PUBLIC_URL=http://<YOUR_IP>:8000 \
+  -e PLATFORM_ENVIRONMENT=DOCKER ghcr.io/gt-arc/opaca/opaca-platform:main
+```
 
 3. Finally, you can deploy your container to the running OPACA Platform. For this, you can use the integrated Swagger UI, which is available at `http://<YOUR_IP>:8000/swagger-ui/index.html` once the OPACA Runtime Platform has been started. Navigate to the `POST /containers` endpoint, click "Try it out", replace the request body with the following content and then click "Execute":
 
-    ```json
-    {
-      "image": {
-        "imageName": "<your-container-name>"
-      }
-    }
-    ```
+```json
+{
+  "image": {
+    "imageName": "<your-container-name>"
+  }
+}
+```
 
    If a UUID is returned, the container has been deployed successfully. You can then test your implemented function by calling the `POST /invoke/{action}` route with your implemented action name and input parameters in the request body.
 
@@ -65,7 +67,7 @@ Here is an example for a custom data type `MyType`:
 
 In your agent class:
 
-```pycon
+```python
 from pydantic import BaseModel
 from typing import List
 
@@ -167,7 +169,7 @@ During the container deployment, your request body to the `POST /containers` wou
 
 You can also define custom routes for your container, by manually creating a FastAPI app with the `create_routes()` function and adding custom routes to it. Remember that you then need to pass your custom FastAPI app to the `run()` function.
 
-```pycon
+```python
 from opaca import Container, run, create_routes
 from my_agent import MyAgent
 
@@ -245,7 +247,7 @@ Once you have implemented the `handle_login()` and `handle_logout()` functions, 
 
 Following is an example of an action that requires authentication:
 
-```pycon
+```python
 @action(auth=True)
 async def login_test(self, login_token: str)
     # Check if the login_token has been sent previously with a successful login attempt.
@@ -262,7 +264,7 @@ Please note that it is in your own responsibility to check if the provided login
 
 Streams can be declared with `@stream(mode=StreamDescription.Mode.GET, auth=True)`, expecting the parameter `login_token` to be present in the function definition as well. The overall structure is very similar to actions.
 
-```pycon
+```python
 @stream(mode=StreamDescription.Mode.GET, auth=True)
 async def login_test_stream(self, login_token: str):
     if login_token not in self.clients.keys():

@@ -1,18 +1,19 @@
 import os
 import uuid
-from datetime import datetime
-from typing import Dict, List, Any
+from datetime import datetime, timezone
+from inspect import iscoroutinefunction
+from typing import Dict, List, Any, Optional
 import json
 
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
-    Login
+    Login, StreamContent
 from .utils import http_error
 
 
 class Container:
 
-    def __init__(self, path_to_image_file: str):
+    def __init__(self, path_to_image_file: str) -> None:
         self.container_id = os.getenv('CONTAINER_ID', '')
         self.platform_url = os.getenv('PLATFORM_URL', '')
         self.token = os.getenv('TOKEN', '')
@@ -20,13 +21,13 @@ class Container:
 
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
-        self.started_at: datetime = datetime.utcnow()
+        self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
         """
-        Load a container's image description from a json file.
+        Load a container's image description from a JSON file.
         """
         try:
             with open(json_file, encoding='utf-8') as f:
@@ -42,7 +43,7 @@ class Container:
             return self.agents[agent_id]
         raise http_error(400, f'Unknown agentId: {agent_id}.')
 
-    def add_agent(self, agent: AbstractAgent):
+    def add_agent(self, agent: AbstractAgent) -> None:
         """
         Add the agent to this container.
         """
@@ -50,19 +51,22 @@ class Container:
             self.agents[agent.agent_id] = agent
             agent.container = self
 
-    def remove_agent(self, agent_id: str):
+    def remove_agent(self, agent_id: str) -> None:
         """
         Remove the agent from the container.
         """
         if self.has_agent(agent_id):
-            agent = self.agents[agent_id]
-            agent.container = None
             del self.agents[agent_id]
 
     def has_agent(self, agent_id) -> bool:
         return agent_id in self.agents
 
-    async def invoke_action(self, name: str, parameters: Dict[str, Any], login_token: str = None):
+    async def invoke_action(
+            self,
+            name: str,
+            parameters: Dict[str, Any],
+            login_token: str = None
+    ) -> None:
         """
         Invoke action on any agent that knows the action.
         """
@@ -71,7 +75,13 @@ class Container:
                 return await agent.invoke_action(name, parameters, login_token)
         raise http_error(400, f'Unknown action: {name}.')
 
-    async def invoke_agent_action(self, name: str, agent_id: str, parameters: Dict[str, Any], login_token: str = None):
+    async def invoke_agent_action(
+            self,
+            name: str,
+            agent_id: str,
+            parameters: Dict[str, Any],
+            login_token: str = None
+    ) -> Any:
         """
         Invoke action on the specified agent.
         """
@@ -79,7 +89,12 @@ class Container:
             return await self.get_agent(agent_id).invoke_action(name, parameters, login_token)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
-    def invoke_stream(self, name: str, mode: StreamDescription.Mode, login_token: str = None):
+    def invoke_stream(
+            self,
+            name: str,
+            mode: StreamDescription.Mode,
+            login_token: str = None
+    ) -> StreamContent:
         """
         GET a stream from or POST a stream to any agent that knows the stream.
         """
@@ -88,7 +103,13 @@ class Container:
                 return agent.invoke_stream(name, mode, login_token)
         raise http_error(400, f'Unknown stream: {name}.')
 
-    def invoke_agent_stream(self, name: str, mode: StreamDescription.Mode, agent_id: str = '', login_token: str = None) -> bytes:
+    def invoke_agent_stream(
+            self,
+            name: str,
+            mode: StreamDescription.Mode,
+            agent_id: str = '',
+            login_token: str = None
+    ) -> Optional[StreamContent]:
         """
         GET a stream from or POST a stream to the specified agent.
         """
@@ -96,7 +117,7 @@ class Container:
             return self.get_agent(agent_id).invoke_stream(name, mode, login_token)
         raise http_error(400, f'Unknown agent: {agent_id}.')
 
-    def send_message(self, agent_id: str, message: Message):
+    def send_message(self, agent_id: str, message: Message) -> None:
         """
         Send a message to the specified agent.
         """
@@ -104,7 +125,7 @@ class Container:
         if agent is not None:
             agent.receive_message(message)
 
-    def subscribe_channel(self, channel: str, agent: AbstractAgent):
+    def subscribe_channel(self, channel: str, agent: AbstractAgent) -> None:
         """
         Subscribe an agent to the specified channel.
         """
@@ -113,7 +134,7 @@ class Container:
         if agent not in self.channels[channel]:
             self.channels[channel].append(agent)
 
-    def unsubscribe_channel(self, channel: str, agent: AbstractAgent):
+    def unsubscribe_channel(self, channel: str, agent: AbstractAgent) -> None:
         """
         Unsubscribe an agent from the specified channel.
         """
@@ -123,7 +144,7 @@ class Container:
             return
         self.channels[channel].remove(agent)
 
-    def broadcast(self, channel: str, message: Message):
+    def broadcast(self, channel: str, message: Message) -> None:
         """
         Broadcast a message to all agents subscribing to the specified channel.
         """
@@ -135,14 +156,21 @@ class Container:
     async def handle_login(self, login: Login) -> str:
         token = str(uuid.uuid4())
         for agent in self.agents.values():
-            await agent.handle_login(LoginMsg(token=token, login=login))
+            msg = LoginMsg(token=token, login=login)
+            if iscoroutinefunction(agent.handle_login):
+                await agent.handle_login(msg)
+            else:
+                agent.handle_login(msg)
         return token
 
     async def handle_logout(self, login_token: str = None) -> bool:
         if not login_token:
             return False
         for agent in self.agents.values():
-            await agent.handle_logout(login_token)
+            if iscoroutinefunction(agent.handle_logout):
+                await agent.handle_logout(login_token)
+            else:
+                agent.handle_logout(login_token)
         return True
 
     def get_description(self) -> ContainerDescription:
@@ -159,10 +187,10 @@ class Container:
     def get_agent_descriptions(self) -> List[AgentDescription]:
         return [agent.make_description() for agent in self.agents.values()]
 
-    def get_running_since(self):
-        return f'{self.started_at.isoformat(timespec="milliseconds")}Z'
+    def get_running_since(self) -> str:
+        return self.started_at.isoformat(timespec="milliseconds")
 
-    def get_arguments(self, include_confidential: bool = True) -> Dict[str, str]:
+    def get_arguments(self, include_confidential: bool = True) -> Dict[str, Any]:
         return { param.name: os.getenv(param.name, param.defaultValue)
                  for param in self.image.parameters
                  if include_confidential or not param.confidential }

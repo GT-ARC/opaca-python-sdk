@@ -2,6 +2,18 @@
 
 All changes to the opaca package will be documented in this file.
 
+## [0.0.7] - 2026-04-08
+
+### Added
+
+- `handle_login` and `handle_logout` methods can now be declared either  async or non-async.
+
+### Changed
+
+- Switched build system from `pip`/`requirements.txt` to `uv` for faster and more reliable dependency management.
+- Reorganized project structure: package source files moved to `opaca/` directory; example files moved to `example/` with their own minimal requirements.
+- Improved type hint coverage and general code readability across core modules.
+
 ## [0.0.6] - 2025-10-16
 
 ### Added
@@ -10,7 +22,7 @@ All changes to the opaca package will be documented in this file.
   - Containers can now handle user credentials for authentication.
   - Agents can define a `handle_login` and `handle_logout` method.
   - The action decorator now accepts an `auth` parameter. If set to `True`, the action will need to define `login_token: str` as a parameter, which will provide the current login_token of the request user, after successful authentication.
-  - During `handle_login`, a username, password, and an uuid are provided. You can then use these information to authenticate to an external service and manage credentials within your custom container.
+  - During `handle_login`, a username, password, and a UUID are provided. You can then use these information to authenticate to an external service and manage credentials within your custom container.
   - An example implementation can be found in the [sample agent](src/sample.py).
 - Added an example in [README.md](README.md#custom-routes) implementing custom endpoints to your container.
 
