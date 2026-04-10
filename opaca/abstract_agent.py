@@ -178,7 +178,7 @@ class AbstractAgent:
         """
         self.container.unsubscribe_channel(channel, self)
 
-    def handle_login(self, login_msg: LoginMsg) -> None:
+    async def handle_login(self, login_msg: LoginMsg) -> None:
         """
         Implement this method in your agent to handle login requests for any external services.
 
@@ -187,7 +187,7 @@ class AbstractAgent:
         """
         pass
 
-    def handle_logout(self, login_token: str) -> None:
+    async def handle_logout(self, login_token: str) -> None:
         """
         Implement this method in your agent to handle logout requests for any external services.
         Use the provided login_token to identify the user.
