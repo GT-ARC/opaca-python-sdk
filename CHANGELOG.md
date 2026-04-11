@@ -6,6 +6,7 @@ All changes to the opaca package will be documented in this file.
 
 ### Added
 
+- New `AsyncOpacaClient` that can be used easily and asynchronously interact with a running OPACA Runtime Platform via its API.
 - `handle_login` and `handle_logout` methods can now be declared either  async or non-async.
 
 ### Changed
