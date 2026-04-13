@@ -1,6 +1,8 @@
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
+from pydantic import ValidationError, BaseModel
 import uuid
+import logging
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
 from .utils import http_error
@@ -8,6 +10,9 @@ from .decorators import register_actions, register_streams
 
 if TYPE_CHECKING:
     from .container import Container
+
+
+log = logging.getLogger(__name__)
 
 
 class AbstractAgent:
@@ -85,6 +90,8 @@ class AbstractAgent:
         try:
             action = self.get_action(name)
             callback = action.callback
+
+            parameters = self.parse_custom_types(name, parameters)
 
             if getattr(callback, '_auth', False):
                 if not login_token:
@@ -202,3 +209,40 @@ class AbstractAgent:
             actions=[action for action in self.actions.values()],
             streams=[stream for stream in self.streams.values()],
         )
+
+    def parse_custom_types(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
+        """
+        Parse any parameters that are defined as custom types into the corresponding model class.
+        """
+        def parse_value(value: Any, cls: type[BaseModel]) -> Any:
+            try:
+                return cls.model_validate(value)
+            except ValidationError as e:
+                log.error(e)
+                return value
+
+        def parse_list_value(value: Any, cls: type[BaseModel]) -> Any:
+            try:
+                return [cls.model_validate(item) for item in value]
+            except ValidationError as e:
+                log.error(e)
+                return value
+
+        def parse_param(name: str, value: Any) -> Any:
+            defs = self.container.definitions
+            param = self.actions[action].parameters[name]
+
+            if param.type == 'array' and param.items is not None:
+                items: Parameter.ArrayItems = param.items
+                if items.type in self.container.definitions:
+                    return parse_list_value(value, defs[items.type])
+
+            elif param.type in self.container.definitions:
+                return parse_value(value, defs[param.type])
+
+            return value
+
+        return {
+            name: parse_param(name, value)
+            for name, value in parameters.items()
+        }
