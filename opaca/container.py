@@ -25,7 +25,6 @@ class Container:
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
-        self.definitions: Dict[str, type[BaseModel]] = {}
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -197,14 +196,3 @@ class Container:
         return { param.name: os.getenv(param.name, param.defaultValue)
                  for param in self.image.parameters
                  if include_confidential or not param.confidential }
-
-    def add_type_definition(self, custom_type: type[BaseModel]) -> None:
-        name = custom_type.__name__
-        schema = custom_type.model_json_schema(mode='serialization')
-        self.definitions[name] = custom_type
-        self.image.definitions[name] = schema
-
-    def remove_type_definition(self, name: str) -> None:
-        if name in self.definitions:
-            del self.definitions[name]
-            del self.image.definitions[name]
