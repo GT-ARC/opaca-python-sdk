@@ -4,6 +4,7 @@ import inspect
 import re
 from typing import (Optional, Callable, get_type_hints, Dict,
                     Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING)
+from pydantic import BaseModel
 
 from .models import StreamDescription, Parameter
 
@@ -82,6 +83,22 @@ def register_streams(agent: 'AbstractAgent') -> None:
             callback=getattr(agent, name),
         )
 
+def update_definitions(agent: 'AbstractAgent') -> None:
+    """
+    Find parameter/result classes that extend Pydantic's BaseModel and auto-generate
+    JSON-Schema for those and add it to the definitions section in container.json.
+    """
+    base_models = {
+        v
+        for _, func in inspect.getmembers(agent, predicate=inspect.ismethod)
+        if getattr(func, '_is_action', False)
+        for v in get_type_hints(func).values()
+        if any(issubclass(x, BaseModel) for x in get_args(v) or [v])
+    }
+    definitions = agent.container.image.definitions
+    for x in base_models:
+        if x.__name__ not in definitions:
+            definitions[x.__name__] = x.model_json_schema()
 
 def check_for_token(name: str, params: Dict[str, Parameter]):
     if not any(name == "login_token" or getattr(p, "name", None) == "login_token"

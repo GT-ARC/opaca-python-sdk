@@ -4,6 +4,14 @@ from fastapi import HTTPException
 
 from opaca import AbstractAgent, action, stream
 from opaca.models import Message, StreamDescription, Parameter, LoginMsg
+from pydantic import BaseModel
+
+
+class SampleData(BaseModel):
+    name: str
+    age: int
+    gender: str | None
+    children: list['SampleData']
 
 
 class SampleAgent(AbstractAgent):
@@ -54,6 +62,13 @@ class SampleAgent(AbstractAgent):
         print(f'{self.agent_id} executing time_consuming action, taking approx {1 + sleep_time} seconds')
         sleep(1 + sleep_time)
         return text
+
+    @action
+    def action_with_data_class(self, person: SampleData) -> SampleData:
+        """
+        No-op action for testing/showcasing JSON-Schema generation for Pydantic data classes
+        """
+        return person
 
     @action(name='ConcatenateArray', description='Concatenates the given array to a string and returns the result.')
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
