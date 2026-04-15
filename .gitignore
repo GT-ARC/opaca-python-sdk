@@ -6,3 +6,6 @@ venv/
 dist/
 *.egg-info/
 build/
+*.env
+*.lock
+temp/

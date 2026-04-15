@@ -4,11 +4,7 @@ from .decorators import action, stream
 from .routes import create_routes
 from .container import Container
 from .abstract_agent import AbstractAgent
-from .models import (Parameter,
-                     ActionDescription,
-                     AgentDescription,
-                     StreamDescription,
-                     Message)
+from .client import AsyncOpacaClient
 
 
 def run(container: Container,
