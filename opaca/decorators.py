@@ -96,9 +96,10 @@ def update_definitions(agent: 'AbstractAgent') -> None:
         if any(issubclass(x, BaseModel) for x in get_args(v) or [v])
     }
     definitions = agent.container.image.definitions
-    for x in base_models:
-        if x.__name__ not in definitions:
-            definitions[x.__name__] = x.model_json_schema()
+    for cls in base_models:
+        if cls.__name__ not in definitions:
+            definitions[cls.__name__] = cls.model_json_schema()
+            agent.container.models[cls.__name__] = cls
 
 def check_for_token(name: str, params: Dict[str, Parameter]):
     if not any(name == "login_token" or getattr(p, "name", None) == "login_token"

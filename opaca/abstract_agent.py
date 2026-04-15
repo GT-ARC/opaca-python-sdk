@@ -230,16 +230,16 @@ class AbstractAgent:
                 return value
 
         def parse_param(name: str, value: Any) -> Any:
-            defs = self.container.definitions
+            models = self.container.models
             param = self.actions[action].parameters[name]
 
             if param.type == 'array' and param.items is not None:
                 items: Parameter.ArrayItems = param.items
-                if items.type in self.container.definitions:
-                    return parse_list_value(value, defs[items.type])
+                if items.type in models:
+                    return parse_list_value(value, models[items.type])
 
-            elif param.type in self.container.definitions:
-                return parse_value(value, defs[param.type])
+            elif param.type in models:
+                return parse_value(value, models[param.type])
 
             return value
 
