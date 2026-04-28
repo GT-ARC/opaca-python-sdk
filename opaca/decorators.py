@@ -268,5 +268,6 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
     return Parameter(
         type=_type,
         required=required,
+        defaultValue=default,
         items=resolve_array_items(hint) if _type == "array" else None,
     )
