@@ -25,7 +25,7 @@ class Container:
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
-        self.models = {}
+        self.models: Dict[str, Any] = {}
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
