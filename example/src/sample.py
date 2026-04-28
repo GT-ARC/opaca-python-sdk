@@ -1,5 +1,5 @@
 from time import sleep
-from typing import Dict, Callable
+from typing import Dict, Callable, Any
 from fastapi import HTTPException
 
 from opaca import AbstractAgent, action, stream
@@ -59,6 +59,13 @@ class SampleAgent(AbstractAgent):
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
         print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
         return separator.join(array)
+
+    @action(description='Returns the data.')
+    def action_with_defaults(self, text: str = 'Text', number: int = 123) -> Any:
+        return {
+            'text': text,
+            'number': number
+        }
 
     # Streams
 
