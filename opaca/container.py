@@ -2,22 +2,31 @@ import os
 import uuid
 from datetime import datetime, timezone
 from inspect import iscoroutinefunction
-from typing import Dict, List, Any, Optional
+from pathlib import Path
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
 import json
+import httpx
+from starlette.responses import FileResponse
 
+from utils import make_file_response
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
 from .utils import http_error
 
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
 
 class Container:
 
-    def __init__(self, path_to_image_file: str) -> None:
+    def __init__(self, app: FastAPI, path_to_image_file: str) -> None:
+        self.app = app
         self.container_id = os.getenv('CONTAINER_ID', '')
         self.platform_url = os.getenv('PLATFORM_URL', '')
         self.token = os.getenv('TOKEN', '')
         self.owner = os.getenv('OWNER', '')
+        self.own_url = os.environ.get("PUBLIC_URL")
 
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
@@ -194,3 +203,29 @@ class Container:
         return { param.name: os.getenv(param.name, param.defaultValue)
                  for param in self.image.parameters
                  if include_confidential or not param.confidential }
+
+    def find_own_url(self):
+        """
+        Find the container's own base url, including the API port.
+
+        Should replace this with SyncOpacaClient call once that exists.
+        """
+        if self.own_url is None:
+            parent_url = os.environ.get('PLATFORM_URL')
+            container_id = os.environ.get('CONTAINER_ID')
+            containers = httpx.get(f"{parent_url}/containers").json()
+            connectivity = next(c["connectivity"] for c in containers if c["containerId"] == container_id)
+            self.own_url = f'{connectivity["publicUrl"]}:{connectivity["apiPortMapping"]}'
+        return self.own_url
+
+    def expose_image(self, path: str | Path) -> str:
+        image_id = str(uuid.uuid4())
+        path: Path = Path(path)
+        url = f'{self.find_own_url()}/img/{image_id}'
+        self.app.add_api_route(
+            f'/img/{image_id}',
+            endpoint=(lambda: make_file_response(path)),
+            methods=['GET'],
+            response_class=FileResponse,
+        )
+        return url
