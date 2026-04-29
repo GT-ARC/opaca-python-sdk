@@ -20,13 +20,13 @@ if TYPE_CHECKING:
 
 class Container:
 
-    def __init__(self, app: FastAPI, path_to_image_file: str) -> None:
-        self.app = app
-        self.container_id = os.getenv('CONTAINER_ID', '')
-        self.platform_url = os.getenv('PLATFORM_URL', '')
-        self.token = os.getenv('TOKEN', '')
-        self.owner = os.getenv('OWNER', '')
-        self.own_url = os.environ.get("PUBLIC_URL")
+    def __init__(self, path_to_image_file: str, app: FastAPI | None = None) -> None:
+        self.app: FastAPI | None = app
+        self.container_id: str = os.getenv('CONTAINER_ID', '')
+        self.platform_url: str = os.getenv('PLATFORM_URL', '')
+        self.token: str = os.getenv('TOKEN', '')
+        self.owner: str = os.getenv('OWNER', '')
+        self.own_url: Optional[str] = os.environ.get("PUBLIC_URL")
 
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
@@ -219,11 +219,13 @@ class Container:
         return self.own_url
 
     def expose_image(self, path: str | Path) -> str:
-        image_id = str(uuid.uuid4())
+        if self.app is None:
+            raise RuntimeError('Cannot expose image')
+        data_id = str(uuid.uuid4())
         path: Path = Path(path)
-        url = f'{self.find_own_url()}/img/{image_id}'
+        url = f'{self.find_own_url()}/img/{data_id}'
         self.app.add_api_route(
-            f'/img/{image_id}',
+            f'/img/{data_id}',
             endpoint=(lambda: make_file_response(path)),
             methods=['GET'],
             response_class=FileResponse,
