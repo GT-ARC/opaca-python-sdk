@@ -2,6 +2,7 @@ import ast
 import textwrap
 import inspect
 import re
+import logging
 from typing import (Optional, Callable, get_type_hints, Dict,
                     Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING)
 from pydantic import BaseModel
@@ -10,6 +11,9 @@ from .models import StreamDescription, Parameter
 
 if TYPE_CHECKING:
     from .abstract_agent import AbstractAgent
+
+
+log = logging.getLogger(__name__)
 
 
 def action(_func: Optional[Callable] = None, *, name: str = '', description: str = '', auth: bool = False):
@@ -50,6 +54,8 @@ def register_actions(agent: 'AbstractAgent') -> None:
         if getattr(func, '_auth', False):
             check_for_token(action_name, params)
 
+        log.debug(f'REGISTER ACTION: {agent.agent_id} {name} {action_name} {description}, {params}, {return_type}')
+
         agent.add_action(
             name=action_name,
             description=description,
@@ -74,7 +80,9 @@ def register_streams(agent: 'AbstractAgent') -> None:
         if getattr(func, '_auth', False):
             check_for_token(stream_name, params)
 
-        mode = getattr(func, '_mode', '')
+        mode = getattr(func, '_mode', StreamDescription.Mode.GET)
+
+        log.debug(f'REGISTER STREAM: {agent.agent_id} {name} {stream_name} {mode} {description}, {params}, {return_type}')
 
         agent.add_stream(
             name=stream_name,
@@ -174,7 +182,7 @@ def parse_name(func: Callable, func_name: str) -> str:
     return action_name
 
 
-def parse_description(func: Callable) -> str:
+def parse_description(func: Callable) -> str | None:
     """
     Parse the description of the decorated function into a proper action/stream description.
     """
