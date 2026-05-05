@@ -97,17 +97,22 @@ def update_definitions(agent: 'AbstractAgent') -> None:
     JSON-Schema for those and add it to the definitions section in container.json.
     """
     base_models = {
-        v
+        arg
         for _, func in inspect.getmembers(agent, predicate=inspect.ismethod)
         if getattr(func, '_is_action', False)
         for v in get_type_hints(func).values()
-        if any(issubclass(x, BaseModel) for x in get_args(v) or [v])
+        for arg in (get_args(v) if get_args(v) else [v])
+        if isinstance(arg, type) and issubclass(arg, BaseModel)
     }
+
     definitions = agent.container.image.definitions
     for cls in base_models:
-        if cls.__name__ not in definitions:
-            definitions[cls.__name__] = cls.model_json_schema()
-            agent.container.models[cls.__name__] = cls
+        try:
+            if cls.__name__ not in definitions:
+                definitions[cls.__name__] = cls.model_json_schema()
+                agent.container.models[cls.__name__] = cls
+        except Exception as e:
+            log.error(f'Failed to add custom type {cls} to container definitions: {e}')
 
 def check_for_token(name: str, params: Dict[str, Parameter]):
     if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
