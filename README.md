@@ -10,13 +10,37 @@ You can install the package by running `pip install opaca` and then `import opac
 
 For an example of how to create new agents, take a look at the files in the `example/` directory. There you can find a full example setup of how to run an agent container with docker.
 
-### `@action` Decorator - Additional Notes
+### The `@action` decorator
 
 - It is required for **all input and output parameters to be annotated with type hints**. The type hints are later resolved into JSON schema to be used within HTTP requests.
 - Action methods need to be defined as **non-static**, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.
 - You can also use type hints from the `typing` library to define the input and output parameters. This includes types such as `List`, `Dict`, `Tuple`, `Optional`, etc.
 - Agent actions can also be defined `async`.
 - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible. As a workaround, you can always fall back to using the `self.add_action()` in the agent constructor to manually register an action. A reference implementation can be found in [example/src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/example/src/sample.py).
+
+### Custom Type Definitions
+
+You can automatically add the JSON Schema for custom types to the containers `definitions` by annotating any action parameter with a type hint for a pydantic `BaseModel` subclass.
+
+Example:
+```python
+from pydantic import BaseModel
+
+
+class SampleData(BaseModel):
+    pass
+
+
+class TestAgent(AbstractAgent):
+    
+    @action
+    def test(param: SampleData) -> str
+        return param.model_dump_json()
+```
+
+By doing so, the JSON Schema for `SampleData` is automatically added to the container's `definitions`, no further action required. This works for arbitrarily nested model classes.
+
+When invoking the action, the `param` variable is also automatically parsed into an object of the respective model type. However, this ONLY works when the type hint is either the plain type (e.g. `param: SampleData`) or a list of that type (e.g. `param: list[SampleData`). Otherwise, the variable will remain a plain dict.
 
 ## Testing & Deployment
 
