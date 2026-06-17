@@ -8,11 +8,10 @@ import json
 import httpx
 from starlette.responses import FileResponse
 
-from utils import make_file_response
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
-from .utils import http_error
+from .utils import http_error, make_file_response
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -20,8 +19,8 @@ if TYPE_CHECKING:
 
 class Container:
 
-    def __init__(self, path_to_image_file: str, app: FastAPI | None = None) -> None:
-        self.app: FastAPI | None = app
+    def __init__(self, path_to_image_file: str, app: 'FastAPI | None' = None) -> None:
+        self.app: 'FastAPI | None' = app
         self.container_id: str = os.getenv('CONTAINER_ID', '')
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.token: str = os.getenv('TOKEN', '')
