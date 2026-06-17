@@ -26,12 +26,13 @@ class Container:
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.token: str = os.getenv('TOKEN', '')
         self.owner: str = os.getenv('OWNER', '')
-        self.own_url: Optional[str] = os.environ.get("PUBLIC_URL")
-
+        self.own_url: Optional[str] = os.getenv('PUBLIC_URL')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
+
+        self._exposed_images: Dict[str, Path] = {}
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -219,15 +220,23 @@ class Container:
         return self.own_url
 
     def expose_image(self, path: str | Path) -> str:
+        def _serve_image(image_id: str) -> FileResponse:
+            if image_id not in self._exposed_images:
+                raise http_error(404, 'Image not found.')
+            return make_file_response(self._exposed_images[image_id])
+
         if self.app is None:
-            raise RuntimeError('Cannot expose image')
-        data_id = str(uuid.uuid4())
-        path: Path = Path(path)
-        url = f'{self.find_own_url()}/img/{data_id}'
-        self.app.add_api_route(
-            f'/img/{data_id}',
-            endpoint=(lambda: make_file_response(path)),
-            methods=['GET'],
-            response_class=FileResponse,
-        )
+            raise RuntimeError('Cannot expose images.')
+
+        if len(self._exposed_images) == 0:
+            self.app.add_api_route(
+                '/img/{image_id}',
+                endpoint=_serve_image,
+                methods=['GET'],
+                response_class=FileResponse,
+            )
+
+        img_id = str(uuid.uuid4())
+        self._exposed_images[img_id] = Path(path)
+        url = f'{self.find_own_url()}/img/{img_id}'
         return url
