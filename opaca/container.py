@@ -234,7 +234,10 @@ class Container:
         """Helper function to publicly expose a file
         via the '/files/{file_id}' route."""
         file_id = str(uuid.uuid4())
-        self._exposed_files[file_id] = Path(path)
+        file_path = Path(path)
+        if not file_path.is_file():
+            raise FileNotFoundError(f'File not found: {file_path}')
+        self._exposed_files[file_id] = file_path
         self._add_files_route()
         return f'/files/{file_id}'
 
@@ -256,5 +259,9 @@ class Container:
 
     def _serve_file(self, file_id: str) -> FileResponse:
         if file_id not in self._exposed_files:
+            raise http_error(404, 'Image not found.')
+        file_path = self._exposed_files[file_id]
+        if not file_path.is_file():
+            self._exposed_files.pop(file_id)
             raise http_error(404, 'Image not found.')
         return make_file_response(self._exposed_files[file_id])
