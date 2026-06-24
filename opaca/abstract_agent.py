@@ -92,6 +92,11 @@ class AbstractAgent:
                     raise http_error(401, 'Missing credentials')
                 parameters['login_token'] = login_token
 
+            # Inject default values in case the action was defined via self.add_action(...)
+            for param_name, param in action.parameters.items():
+                if param.defaultValue is not None and param_name not in parameters:
+                    parameters[param_name] = param.defaultValue
+
             if iscoroutinefunction(callback):
                 return await callback(**parameters)
             else:
