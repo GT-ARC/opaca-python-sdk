@@ -1,44 +1,8 @@
 from pathlib import Path
 import mimetypes as mime
+from typing import TYPE_CHECKING
 from fastapi import HTTPException, FastAPI
 from starlette.responses import FileResponse
-
-from .container import Container
-from .routes import create_routes
-
-
-def run(container: Container,
-        title: str | None = None,
-        host: str | None = None,
-        port: int | None = None,
-        app: FastAPI | None = None,
-    ) -> None:
-    """
-    Run the container with uvicorn.
-
-    :param container: The agent container to run the application with.
-    :param title: The title of the application. Defaults to the image name specified in the container image.
-    :param host: The hostname to run the application on. Defaults to '0.0.0.0'.
-    :param port: The port to run the application on. Defaults to the apiPort specified in the container image.
-    :param app: The FastAPI object with the routes. If this is provided,
-    the title argument becomes irrelevant. Defaults to the standard OPACA routes.
-    """
-    if title is None:
-        title = container.image.imageName
-
-    if host is None:
-        host = '0.0.0.0'
-
-    if port is None:
-        port = container.image.apiPort
-
-    if app is None:
-        app = create_routes(title, container)
-
-    container.app = app
-
-    import uvicorn
-    uvicorn.run(app, host=host, port=port)
 
 
 def http_error(code: int, cause: str) -> HTTPException:
