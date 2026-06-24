@@ -204,12 +204,12 @@ class AbstractAgent:
             streams=[stream for stream in self.streams.values()],
         )
 
-    def expose_image(self, path: str | Path) -> str:
+    def expose_file(self, path: str | Path) -> str:
         """
-        Expose an image to be publicly available
-        via the "/image/{image_id}" route.
+        Expose a file to be publicly available
+        via the '/files/{file_id}' route.
 
-        :param path: The path to the image file.
-        :return: The path where the image is available.
+        :param path: The path to the file.
+        :return: The API path where the file is available.
         """
-        return self.container.expose_image(path)
+        return self.container.expose_file(path)

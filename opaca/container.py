@@ -32,9 +32,9 @@ class Container:
         self.channels: Dict[str, List[AbstractAgent]] = {}
 
         self._app: 'FastAPI | None' = app
-        self._exposed_images: Dict[str, Path] = {}
+        self._exposed_files: Dict[str, Path] = {}
 
-        self._add_images_route()
+        self._add_files_route()
 
     @property
     def app(self) -> FastAPI | None:
@@ -43,7 +43,7 @@ class Container:
     @app.setter
     def app(self, app: FastAPI) -> None:
         self._app = app
-        self._add_images_route()
+        self._add_files_route()
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -230,29 +230,28 @@ class Container:
             self.own_url = f'{connectivity["publicUrl"]}:{connectivity["apiPortMapping"]}'
         return self.own_url
 
-    def expose_image(self, path: str | Path) -> str:
-        """Helper function to publicly expose an image
-        via the '/image/{image_id}' route."""
-        img_id = str(uuid.uuid4())
-        self._exposed_images[img_id] = Path(path)
-        api_path = f'/img/{img_id}'
-        return api_path
+    def expose_file(self, path: str | Path) -> str:
+        """Helper function to publicly expose a file
+        via the '/files/{file_id}' route."""
+        file_id = str(uuid.uuid4())
+        self._exposed_files[file_id] = Path(path)
+        return f'/files/{file_id}'
 
-    def _add_images_route(self) -> None:
+    def _add_files_route(self) -> None:
         if self._app is None:
             return
-        path = '/img/{image_id}'
+        path = '/files/{file_id}'
         routes = [route for route in self._app.routes if isinstance(route, APIRoute)]
         if any(route.path == path for route in routes):
             return
         self._app.add_api_route(
             path,
-            endpoint=self._serve_image,
+            endpoint=self._serve_file,
             methods=['GET'],
             response_class=FileResponse,
         )
 
-    def _serve_image(self, image_id: str) -> FileResponse:
-        if image_id not in self._exposed_images:
+    def _serve_file(self, file_id: str) -> FileResponse:
+        if file_id not in self._exposed_files:
             raise http_error(404, 'Image not found.')
-        return make_file_response(self._exposed_images[image_id])
+        return make_file_response(self._exposed_files[file_id])
