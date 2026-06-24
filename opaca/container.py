@@ -235,10 +235,13 @@ class Container:
         via the '/files/{file_id}' route."""
         file_id = str(uuid.uuid4())
         self._exposed_files[file_id] = Path(path)
+        self._add_files_route()
         return f'/files/{file_id}'
 
     def _add_files_route(self) -> None:
         if self._app is None:
+            return
+        if len(self._exposed_files) == 0:
             return
         path = '/files/{file_id}'
         routes = [route for route in self._app.routes if isinstance(route, APIRoute)]
