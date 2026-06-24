@@ -37,11 +37,11 @@ class Container:
         self._add_files_route()
 
     @property
-    def app(self) -> FastAPI | None:
+    def app(self) -> 'FastAPI | None':
         return self._app
 
     @app.setter
-    def app(self, app: FastAPI) -> None:
+    def app(self, app: 'FastAPI') -> None:
         self._app = app
         self._add_files_route()
 
