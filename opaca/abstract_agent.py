@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
 import uuid
@@ -202,3 +203,13 @@ class AbstractAgent:
             actions=[action for action in self.actions.values()],
             streams=[stream for stream in self.streams.values()],
         )
+
+    def expose_image(self, path: str | Path) -> str:
+        """
+        Expose an image to be publicly available
+        via the "/image/{image_id}" route.
+
+        :param path: The path to the image file.
+        :return: The full URL where the image is available.
+        """
+        return self.container.expose_image(path)

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, TYPE_CHECKING
 import json
 import httpx
+from fastapi.routing import APIRoute
 from starlette.responses import FileResponse
 
 from utils import make_file_response
@@ -21,7 +22,6 @@ if TYPE_CHECKING:
 class Container:
 
     def __init__(self, path_to_image_file: str, app: FastAPI | None = None) -> None:
-        self.app: FastAPI | None = app
         self.container_id: str = os.getenv('CONTAINER_ID', '')
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.token: str = os.getenv('TOKEN', '')
@@ -32,7 +32,19 @@ class Container:
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
 
+        self._app: FastAPI | None = app
         self._exposed_images: Dict[str, Path] = {}
+
+        self._add_images_route()
+
+    @property
+    def app(self) -> FastAPI | None:
+        return self._app
+
+    @app.setter
+    def app(self, app: FastAPI) -> None:
+        self._app = app
+        self._add_images_route()
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -211,32 +223,37 @@ class Container:
 
         Should replace this with SyncOpacaClient call once that exists.
         """
+        if not self.platform_url:
+            return f'http://localhost:{self.image.apiPort}'
         if self.own_url is None:
-            parent_url = os.environ.get('PLATFORM_URL')
-            container_id = os.environ.get('CONTAINER_ID')
-            containers = httpx.get(f"{parent_url}/containers").json()
-            connectivity = next(c["connectivity"] for c in containers if c["containerId"] == container_id)
+            containers = httpx.get(f"{self.platform_url}/containers").json()
+            connectivity = next(c["connectivity"] for c in containers if c["containerId"] == self.container_id)
             self.own_url = f'{connectivity["publicUrl"]}:{connectivity["apiPortMapping"]}'
         return self.own_url
 
     def expose_image(self, path: str | Path) -> str:
-        def _serve_image(image_id: str) -> FileResponse:
-            if image_id not in self._exposed_images:
-                raise http_error(404, 'Image not found.')
-            return make_file_response(self._exposed_images[image_id])
-
-        if self.app is None:
-            raise RuntimeError('Cannot expose images.')
-
-        if len(self._exposed_images) == 0:
-            self.app.add_api_route(
-                '/img/{image_id}',
-                endpoint=_serve_image,
-                methods=['GET'],
-                response_class=FileResponse,
-            )
-
+        """Helper function to publicly expose an image
+        via the '/image/{image_id}' route."""
         img_id = str(uuid.uuid4())
         self._exposed_images[img_id] = Path(path)
         url = f'{self.find_own_url()}/img/{img_id}'
         return url
+
+    def _add_images_route(self) -> None:
+        if self._app is None:
+            return
+        path = '/img/{image_id}'
+        routes = [route for route in self._app.routes if isinstance(route, APIRoute)]
+        if any(route.path == path for route in routes):
+            return
+        self._app.add_api_route(
+            path,
+            endpoint=self._serve_image,
+            methods=['GET'],
+            response_class=FileResponse,
+        )
+
+    def _serve_image(self, image_id: str) -> FileResponse:
+        if image_id not in self._exposed_images:
+            raise http_error(404, 'Image not found.')
+        return make_file_response(self._exposed_images[image_id])
