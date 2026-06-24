@@ -235,8 +235,8 @@ class Container:
         via the '/image/{image_id}' route."""
         img_id = str(uuid.uuid4())
         self._exposed_images[img_id] = Path(path)
-        url = f'{self.find_own_url()}/img/{img_id}'
-        return url
+        api_path = f'/img/{img_id}'
+        return api_path
 
     def _add_images_route(self) -> None:
         if self._app is None:

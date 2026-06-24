@@ -210,6 +210,6 @@ class AbstractAgent:
         via the "/image/{image_id}" route.
 
         :param path: The path to the image file.
-        :return: The full URL where the image is available.
+        :return: The path where the image is available.
         """
         return self.container.expose_image(path)
