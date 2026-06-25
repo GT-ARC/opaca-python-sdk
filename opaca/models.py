@@ -67,12 +67,18 @@ class AgentDescription(BaseModel):
     streams: List[StreamDescription] = []
 
 
+class PortDescription(BaseModel):
+    protocol: str
+    description: str = ''
+
+
+class Connectivity(BaseModel):
+    publicUrl: str
+    apiPortMapping: int
+    extraPortMappings: Dict[int, PortDescription] = {}
+
+
 class ImageDescription(BaseModel):
-
-    class PortDescription(BaseModel):
-        protocol: str
-        description: str = ''
-
     imageName: str
     requires: List[str] = []
     provides: List[str] = []
@@ -95,7 +101,7 @@ class ContainerDescription(BaseModel):
     agents: List[AgentDescription] = []
     owner: str = ''
     runningSince: str
-    connectivity: Optional[Any] = None
+    connectivity: Optional[Connectivity] = None
 
 
 class Login(BaseModel):
