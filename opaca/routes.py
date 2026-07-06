@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Annotated
 from fastapi import FastAPI
 from fastapi.params import Header
-from starlette.responses import StreamingResponse
+from starlette.responses import StreamingResponse, FileResponse
 
 from .container import Container
 from .models import Message, AgentDescription, ContainerDescription, StreamDescription, Login
@@ -100,6 +100,12 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         return await container.handle_logout(ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
+    @app.get('/files/{file_id}', response_model=FileResponse)
+    async def get_file(file_id: str) -> FileResponse:
+        """
+        GET a file exposed via the expose_file() function.
+        """
+        return container.get_exposed_file(file_id)
 
     def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:
         """
