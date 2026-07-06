@@ -25,7 +25,7 @@ class Container:
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.token: str = os.getenv('TOKEN', '')
         self.owner: str = os.getenv('OWNER', '')
-        self.own_url: Optional[str] = os.getenv('PUBLIC_URL')
+        self.own_url: Optional[str] = None
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.now(timezone.utc)
@@ -258,10 +258,11 @@ class Container:
         )
 
     def _serve_file(self, file_id: str) -> FileResponse:
+        error_msg = 'Image not found.'
         if file_id not in self._exposed_files:
-            raise http_error(404, 'Image not found.')
+            raise http_error(404, error_msg)
         file_path = self._exposed_files[file_id]
         if not file_path.is_file():
             self._exposed_files.pop(file_id)
-            raise http_error(404, 'Image not found.')
+            raise http_error(404, error_msg)
         return make_file_response(self._exposed_files[file_id])
