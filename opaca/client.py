@@ -50,8 +50,11 @@ class AsyncOpacaClient:
 
     ### CONTAINERS ###
 
-    async def get_containers(self) -> list[ContainerDescription]:
-        response = await self._request('GET', '/containers')
+    async def get_containers(self, include_connected: bool = False) -> list[ContainerDescription]:
+        """
+        Get a list of all containers. If includeConnected is True, also include containers from connected platforms.
+        """
+        response = await self._request('GET', '/containers', params=_build_query_params(includeConnected=include_connected))
         return [ContainerDescription.model_validate(container)
                 for container in response.json()]
 
@@ -75,8 +78,11 @@ class AsyncOpacaClient:
 
     ### AGENTS ###
 
-    async def get_agents(self) -> list[AgentDescription]:
-        response = await self._request('GET', '/agents')
+    async def get_agents(self, include_connected: bool = False) -> list[AgentDescription]:
+        """
+        Get a list of all agents. If includeConnected is True, also include agents from connected platforms.
+        """
+        response = await self._request('GET', '/agents', params=_build_query_params(includeConnected=include_connected))
         return [AgentDescription.model_validate(agent) for agent in response.json()]
 
     async def get_agent(self, agent_id: str) -> AgentDescription:
