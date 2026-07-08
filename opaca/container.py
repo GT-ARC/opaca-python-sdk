@@ -230,7 +230,7 @@ class Container:
         return f'/files/{file_id}'
 
     def get_exposed_file(self, file_id: str) -> FileResponse:
-        error_msg = 'Image not found.'
+        error_msg = 'File not found.'
         if file_id not in self._exposed_files:
             raise http_error(404, error_msg)
         file_path = self._exposed_files[file_id]

@@ -4,6 +4,7 @@ from fastapi import HTTPException
 
 from opaca import AbstractAgent, action, stream
 from opaca.models import Message, StreamDescription, Parameter, LoginMsg
+from opaca.utils import http_error
 
 
 class SampleAgent(AbstractAgent):
@@ -77,8 +78,11 @@ class SampleAgent(AbstractAgent):
         get a URL where that file is directly available
         for download.
         """
-        path = self.expose_file(f'resources/{file_name}')
-        return f'{self.container.find_own_url()}{path}'
+        try:
+            path = self.expose_file(f'resources/{file_name}')
+            return f'{self.container.find_own_url()}{path}'
+        except FileNotFoundError:
+            raise http_error(404, f'File not found: resources/{file_name}')
 
     # Streams
 
