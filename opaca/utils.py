@@ -1,7 +1,6 @@
 from pathlib import Path
 import mimetypes as mime
-from typing import TYPE_CHECKING
-from fastapi import HTTPException, FastAPI
+from fastapi import HTTPException
 from starlette.responses import FileResponse
 
 

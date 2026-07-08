@@ -3,10 +3,9 @@ import uuid
 from datetime import datetime, timezone
 from inspect import iscoroutinefunction
 from pathlib import Path
-from typing import Dict, List, Any, Optional, TYPE_CHECKING
+from typing import Dict, List, Any, Optional
 import json
 import httpx
-from fastapi.routing import APIRoute
 from starlette.responses import FileResponse
 
 from .abstract_agent import AbstractAgent
@@ -14,19 +13,15 @@ from .models import ContainerDescription, AgentDescription, Message, ImageDescri
     Login, StreamContent
 from .utils import http_error, make_file_response
 
-if TYPE_CHECKING:
-    from fastapi import FastAPI
-
 
 class Container:
 
-    def __init__(self, path_to_image_file: str, app: 'FastAPI | None' = None) -> None:
+    def __init__(self, path_to_image_file: str) -> None:
         self.container_id: str = os.getenv('CONTAINER_ID', '')
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.token: str = os.getenv('TOKEN', '')
         self.owner: str = os.getenv('OWNER', '')
         self.own_url: Optional[str] = None
-        self.app: 'FastAPI | None' = app
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.now(timezone.utc)
