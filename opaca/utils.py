@@ -6,9 +6,7 @@ from starlette.responses import FileResponse
 
 
 def http_error(code: int, cause: str) -> HTTPException:
-    """
-    custom http exception like in assessment example solution
-    """
+    """Shorthand for HTTPException"""
     return HTTPException(status_code=code, detail={"cause": cause})
 
 

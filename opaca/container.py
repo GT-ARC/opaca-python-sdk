@@ -25,25 +25,14 @@ class Container:
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.token: str = os.getenv('TOKEN', '')
         self.owner: str = os.getenv('OWNER', '')
-        self.own_url: Optional[str] = os.getenv('PUBLIC_URL')
+        self.own_url: Optional[str] = None
+        self.app: 'FastAPI | None' = app
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
 
-        self._app: 'FastAPI | None' = app
         self._exposed_files: Dict[str, Path] = {}
-
-        self._add_files_route()
-
-    @property
-    def app(self) -> 'FastAPI | None':
-        return self._app
-
-    @app.setter
-    def app(self, app: 'FastAPI') -> None:
-        self._app = app
-        self._add_files_route()
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -238,30 +227,14 @@ class Container:
         if not file_path.is_file():
             raise FileNotFoundError(f'File not found: {file_path}')
         self._exposed_files[file_id] = file_path
-        self._add_files_route()
         return f'/files/{file_id}'
 
-    def _add_files_route(self) -> None:
-        if self._app is None:
-            return
-        if len(self._exposed_files) == 0:
-            return
-        path = '/files/{file_id}'
-        routes = [route for route in self._app.routes if isinstance(route, APIRoute)]
-        if any(route.path == path for route in routes):
-            return
-        self._app.add_api_route(
-            path,
-            endpoint=self._serve_file,
-            methods=['GET'],
-            response_class=FileResponse,
-        )
-
-    def _serve_file(self, file_id: str) -> FileResponse:
+    def get_exposed_file(self, file_id: str) -> FileResponse:
+        error_msg = 'Image not found.'
         if file_id not in self._exposed_files:
-            raise http_error(404, 'Image not found.')
+            raise http_error(404, error_msg)
         file_path = self._exposed_files[file_id]
         if not file_path.is_file():
             self._exposed_files.pop(file_id)
-            raise http_error(404, 'Image not found.')
+            raise http_error(404, error_msg)
         return make_file_response(self._exposed_files[file_id])
