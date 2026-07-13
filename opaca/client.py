@@ -1,14 +1,22 @@
 import httpx
+import enum
 from typing import Any, AsyncIterator
-from httpx import QueryParams
+from httpx import QueryParams, USE_CLIENT_DEFAULT
 
 from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
     Message, Event, StreamContent
 
 
+class Timeout(enum.Enum):
+    NOT_SET = enum.auto()
+
+
+TimeoutType = float | int | Timeout | None
+
+
 class AsyncOpacaClient:
 
-    def __init__(self, url: str, timeout: float | None = None) -> None:
+    def __init__(self, url: str, timeout: TimeoutType = Timeout.NOT_SET) -> None:
         """
         A client for asynchronous interaction with an OPACA Runtime Platform.
 
@@ -18,7 +26,7 @@ class AsyncOpacaClient:
         self.url: str = url
         self.token: str | None = None
         self.container_tokens: dict[str, str] = {}
-        self.timeout: float | None = timeout
+        self.timeout: TimeoutType = None if timeout is Timeout.NOT_SET else timeout
 
     ### AUTHENTICATION ###
 
@@ -26,7 +34,7 @@ class AsyncOpacaClient:
             self,
             username: str,
             password: str,
-            timeout: float | None = None,
+            timeout: TimeoutType = Timeout.NOT_SET,
     ) -> None:
         """
         Acquire a login token from the platform. The token is also cached within
@@ -39,7 +47,7 @@ class AsyncOpacaClient:
 
     async def renew_token(
             self,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> None:
         """
         Update the cached platform login token.
@@ -53,7 +61,7 @@ class AsyncOpacaClient:
             container_id: str,
             username: str,
             password: str,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> str:
         """
         Acquires a login token from a container. The token is also cached internally.
@@ -74,7 +82,7 @@ class AsyncOpacaClient:
     async def get_containers(
             self,
             include_connected: bool = False,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> list[ContainerDescription]:
         """
         Get a list of all containers. If includeConnected is True, also include containers from connected platforms.
@@ -87,7 +95,7 @@ class AsyncOpacaClient:
     async def post_container(
             self,
             post_container: PostContainer,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> str:
         body = post_container.model_dump(mode='json')
         response = await self._request('POST', '/containers', body=body, timeout=timeout)
@@ -96,7 +104,7 @@ class AsyncOpacaClient:
     async def put_container(
             self,
             post_container: PostContainer,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> str:
         body = post_container.model_dump(mode='json')
         response = await self._request('PUT', '/containers', body=body, timeout=timeout)
@@ -105,7 +113,7 @@ class AsyncOpacaClient:
     async def delete_container(
             self,
             container_id: str,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
         response = await self._request('DELETE', f'/containers/{container_id}', timeout=timeout)
         return response.json()
@@ -113,7 +121,7 @@ class AsyncOpacaClient:
     async def post_container_notify(
             self,
             container_id: str,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
         response = await self._request('POST', f'/containers/notify', body=container_id, timeout=timeout)
         return response.json()
@@ -123,7 +131,7 @@ class AsyncOpacaClient:
     async def get_agents(
             self,
             include_connected: bool = False,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> list[AgentDescription]:
         """
         Get a list of all agents. If includeConnected is True, also include agents from connected platforms.
@@ -135,7 +143,7 @@ class AsyncOpacaClient:
     async def get_agent(
             self,
             agent_id: str,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> AgentDescription:
         response = await self._request('GET', f'/agents/{agent_id}', timeout=timeout)
         return AgentDescription.model_validate(response.json())
@@ -147,7 +155,7 @@ class AsyncOpacaClient:
             args: dict[str, Any] | None = None,
             container_id: str | None = None,
             forward: bool = True,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> Any | None:
         if args is None:
             args = {}
@@ -162,7 +170,7 @@ class AsyncOpacaClient:
             agent_id: str | None = None,
             container_id: str | None = None,
             forward: bool = True,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> AsyncIterator[bytes]:
         """
         Returns an async iterator over a byte stream. You can collect the data
@@ -180,7 +188,7 @@ class AsyncOpacaClient:
             agent_id: str | None = None,
             container_id: str | None = None,
             forward: bool = True,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> AsyncIterator[bytes]:
         """
         The stream content that is posted can be any iterable byte stream data.
@@ -197,7 +205,7 @@ class AsyncOpacaClient:
 
     async def get_connections(
             self,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> list[str]:
         response = await self._request('GET', '/connections', timeout=timeout)
         return response.json()
@@ -206,7 +214,7 @@ class AsyncOpacaClient:
             self,
             connection: str,
             connect_back: bool = False,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
         body = {'url': connection, 'connectBack': connect_back, 'token': None}
         response = await self._request('POST', '/connections', body=body, timeout=timeout)
@@ -216,7 +224,7 @@ class AsyncOpacaClient:
             self,
             connection: str,
             connect_back: bool = False,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
         body = ConnectionRequest(url=connection, connectBack=connect_back).model_dump(mode='json')
         response = await self._request('DELETE', f'/connections', body=body, timeout=timeout)
@@ -225,7 +233,7 @@ class AsyncOpacaClient:
     async def post_connection_notify(
             self,
             connection: str,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
         response = await self._request('POST', '/connections/notify', body=connection, timeout=timeout)
         return response.json()
@@ -238,7 +246,7 @@ class AsyncOpacaClient:
             message: Message,
             container_id: str | None = None,
             forward: bool = True,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> None:
         body = message.model_dump(mode='json')
         params = _build_query_params(containerId=container_id, forward=forward)
@@ -250,7 +258,7 @@ class AsyncOpacaClient:
             message: Message,
             container_id: str | None = None,
             forward: bool = True,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> None:
         body = message.model_dump(mode='json')
         params = _build_query_params(containerId=container_id, forward=forward)
@@ -260,21 +268,21 @@ class AsyncOpacaClient:
 
     async def get_info(
             self,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> PlatformInfo:
         response = await self._request('GET', '/info', timeout=timeout)
         return PlatformInfo.model_validate(response.json())
 
     async def get_config(
             self,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> dict[str, Any]:
         response = await self._request('GET', '/config', timeout=timeout)
         return response.json()
 
     async def get_history(
             self,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> list[Event]:
         response = await self._request('GET', '/history', timeout=timeout)
         return [Event.model_validate(event) for event in response.json()]
@@ -287,10 +295,10 @@ class AsyncOpacaClient:
             path: str,
             body: Any | None = None,
             params: QueryParams | None = None,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> httpx.Response:
-        timeout = self.timeout if timeout is None else timeout
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
+        async with httpx.AsyncClient() as client:
             response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
             return response
@@ -301,11 +309,11 @@ class AsyncOpacaClient:
             path: str,
             content: StreamContent = None,
             params: QueryParams | None = None,
-            timeout: float | None = None
+            timeout: TimeoutType = Timeout.NOT_SET
     ) -> AsyncIterator[bytes]:
         timeout = self.timeout if timeout is None else timeout
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            async with client.stream(method, f'{self.url}{path}', content=content, params=params, headers=self._headers(), timeout=timeout) as response:
+        async with httpx.AsyncClient() as client:
+            async with client.stream(method, f'{self.url}{path}', content=content, params=params, headers=self._headers(), timeout=USE_CLIENT_DEFAULT) as response:
                 response.raise_for_status()
                 async for chunk in response.aiter_bytes():
                     yield chunk
