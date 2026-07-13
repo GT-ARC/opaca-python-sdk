@@ -1,7 +1,7 @@
 import httpx
 import enum
 from typing import Any, AsyncIterator
-from httpx import QueryParams, USE_CLIENT_DEFAULT
+from httpx import QueryParams
 
 from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
     Message, Event, StreamContent
@@ -311,9 +311,9 @@ class AsyncOpacaClient:
             params: QueryParams | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> AsyncIterator[bytes]:
-        timeout = self.timeout if timeout is None else timeout
+        timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
         async with httpx.AsyncClient() as client:
-            async with client.stream(method, f'{self.url}{path}', content=content, params=params, headers=self._headers(), timeout=USE_CLIENT_DEFAULT) as response:
+            async with client.stream(method, f'{self.url}{path}', content=content, params=params, headers=self._headers(), timeout=timeout) as response:
                 response.raise_for_status()
                 async for chunk in response.aiter_bytes():
                     yield chunk
