@@ -289,6 +289,7 @@ class AsyncOpacaClient:
             params: QueryParams | None = None,
             timeout: float | None = None
     ) -> httpx.Response:
+        timeout = self.timeout if timeout is None else timeout
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             response.raise_for_status()
@@ -302,6 +303,7 @@ class AsyncOpacaClient:
             params: QueryParams | None = None,
             timeout: float | None = None
     ) -> AsyncIterator[bytes]:
+        timeout = self.timeout if timeout is None else timeout
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             async with client.stream(method, f'{self.url}{path}', content=content, params=params, headers=self._headers(), timeout=timeout) as response:
                 response.raise_for_status()
