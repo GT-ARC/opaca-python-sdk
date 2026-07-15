@@ -100,7 +100,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         return await container.handle_logout(ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
-    @app.get('/files/{file_id}', response_model=FileResponse)
+    @app.get('/files/{file_id}', response_class=FileResponse)
     async def get_file(file_id: str) -> FileResponse:
         """
         GET a file exposed via the expose_file() function.
