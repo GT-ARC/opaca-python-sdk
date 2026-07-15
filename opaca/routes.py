@@ -105,7 +105,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         GET a file exposed via the expose_file() function.
         """
-        return container.get_exposed_file(file_id)
+        return container._serve_exposed_file(file_id)
 
     def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:
         """

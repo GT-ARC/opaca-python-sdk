@@ -79,8 +79,8 @@ class SampleAgent(AbstractAgent):
         for download.
         """
         try:
-            path = self.expose_file(f'resources/{file_name}')
-            return f'{self.container.find_own_url()}{path}'
+            file_id = self.expose_file(f'resources/{file_name}')
+            return self.get_file_url(file_id)
         except FileNotFoundError:
             raise http_error(404, f'File not found: resources/{file_name}')
 
