@@ -272,6 +272,32 @@ async def login_test_stream(self, login_token: str):
     yield b'Calling authenticated stream with login_token: ' + login_token.encode() + b'\n' + self.clients[login_token]().encode()
 ```
 
+## Exposing files
+
+If you want to make a file in the container easily available for download, for example for SAGE to be able to embed an image into its output, you can do so using the built-in `GET /files/{file_id}` route.
+
+To make a file available via this route, you can use the `expose_file(path_to_file)` method available on any agent.
+
+Example:
+```python
+class SampleAgent(AbstractAgent):
+
+    @action
+    def plot_something(self, data: list[tuple[int, int]]) -> str:
+        """
+        This mock function creates a plot given the data, saves it to disk, 
+        exposes the saved plot image and returns the URL to that image.
+        """
+        plot = plot_data(data)
+        save_plot(plot, 'plots/plot.png')
+
+        # This returns only the file_id.
+        file_id = self.expose_file('plots/plot.png')
+
+        # Use this method to get the full URL where the file is available.
+        return self.get_file_url(file_id)
+```
+
 ## Additional Information
 
 * All agent classes should extend the `AbstractAgent` class. Make sure to pass a `Container` object to the agent.

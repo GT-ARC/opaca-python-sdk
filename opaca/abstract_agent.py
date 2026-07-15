@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
 import uuid
@@ -207,3 +208,25 @@ class AbstractAgent:
             actions=[action for action in self.actions.values()],
             streams=[stream for stream in self.streams.values()],
         )
+
+    def expose_file(self, path: str | Path) -> str:
+        """
+        Expose a file to be publicly available
+        via the '/files/{file_id}' route.
+
+        Call `self.get_file_url(file_id)` to get the full URL where
+        the file is available.
+
+        :param path: The path to the file.
+        :return: The new file_id for the file.
+        """
+        return self.container.expose_file(path)
+
+    def get_file_url(self, file_id: str) -> str:
+        """
+        Get the full URL for an exposed file.
+
+        This is only usable AFTER the container is online and the
+        platform was able to communicate with it.
+        """
+        return self.container.get_file_url(file_id)

@@ -4,6 +4,7 @@ from fastapi import HTTPException
 
 from opaca import AbstractAgent, action, stream
 from opaca.models import Message, StreamDescription, Parameter, LoginMsg
+from opaca.utils import http_error
 
 
 class SampleAgent(AbstractAgent):
@@ -66,6 +67,22 @@ class SampleAgent(AbstractAgent):
             'text': text,
             'number': number
         }
+
+    @action
+    def expose_resource_file(self, file_name: str) -> str:
+        """
+        Expose a file from the resources/ directory via the
+        /files/{file_id} route using the expose_file function.
+
+        Call for example with file_name=container.json to
+        get a URL where that file is directly available
+        for download.
+        """
+        try:
+            file_id = self.expose_file(f'resources/{file_name}')
+            return self.get_file_url(file_id)
+        except FileNotFoundError:
+            raise http_error(404, f'File not found: resources/{file_name}')
 
     # Streams
 
