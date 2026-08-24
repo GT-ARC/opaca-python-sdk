@@ -221,33 +221,28 @@ class AbstractAgent:
         """
         Parse any parameters that are defined as custom types into the corresponding model class.
         """
-        def parse_value(value: Any, cls: type[BaseModel]) -> Any:
-            try:
+        models = self.container.models
+
+        def parse_model(value: Any, param: Parameter | Parameter.ArrayItems | None) -> Any:
+            if param is None: return value
+
+            if param.type == 'array':
+                if param.items is None or not isinstance(value, list): return value
+                return [parse_model(item, param.items) for item in value]
+
+            if param.type in models:
+                cls = models[param.type]
                 return cls.model_validate(value)
-            except ValidationError as e:
-                log.error(e)
-                return value
-
-        def parse_list_value(value: Any, cls: type[BaseModel]) -> Any:
-            try:
-                return [cls.model_validate(item) for item in value]
-            except ValidationError as e:
-                log.error(e)
-                return value
-
-        def parse_param(name: str, value: Any) -> Any:
-            models = self.container.models
-            param = self.actions[action].parameters[name]
-
-            if param.type == 'array' and param.items is not None:
-                items: Parameter.ArrayItems = param.items
-                if items.type in models:
-                    return parse_list_value(value, models[items.type])
-
-            elif param.type in models:
-                return parse_value(value, models[param.type])
 
             return value
+
+        def parse_param(name: str, value: Any) -> Any:
+            param = self.actions[action].parameters[name]
+            try:
+                return parse_model(value, param)
+            except ValidationError as e:
+                log.error(e)
+                return value
 
         return {
             name: parse_param(name, value)
