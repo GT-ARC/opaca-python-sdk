@@ -8,11 +8,20 @@ from opaca.models import Message, StreamDescription, Parameter, LoginMsg
 from opaca.utils import http_error
 
 
-class SampleData(BaseModel):
-    name: str
-    age: int
-    gender: str | None
-    children: list['SampleData']
+class SampleDataParam(BaseModel):
+    name: str = ''
+    age: int = 0
+    gender: str | None = None
+    children: list['SampleDataParam'] = []
+
+
+class SampleDataInList(BaseModel):
+    person: SampleDataParam
+
+
+class SampleDataReturn(BaseModel):
+    param: SampleDataParam
+    inlist: list[list[SampleDataInList]]
 
 
 class SampleAgent(AbstractAgent):
@@ -65,11 +74,11 @@ class SampleAgent(AbstractAgent):
         return text
 
     @action
-    def action_with_data_class(self, person: SampleData) -> SampleData:
+    def action_with_data_class(self, param: SampleDataParam, inlist: list[list[SampleDataInList]]) -> SampleDataReturn:
         """
         No-op action for testing/showcasing JSON-Schema generation for Pydantic data classes
         """
-        return person
+        return SampleDataReturn(param=param, inlist=inlist)
 
     @action(name='ConcatenateArray', description='Concatenates the given array to a string and returns the result.')
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
