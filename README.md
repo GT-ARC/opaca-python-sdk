@@ -18,30 +18,6 @@ For an example of how to create new agents, take a look at the files in the `exa
 - Agent actions can also be defined `async`.
 - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible. As a workaround, you can always fall back to using the `self.add_action()` in the agent constructor to manually register an action. A reference implementation can be found in [example/src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/example/src/sample.py).
 
-### Custom Type Definitions
-
-You can automatically add the JSON Schema for custom types to the containers `definitions` by annotating any action parameter with a type hint for a pydantic `BaseModel` subclass.
-
-Example:
-```python
-from pydantic import BaseModel
-
-
-class SampleData(BaseModel):
-    pass
-
-
-class TestAgent(AbstractAgent):
-    
-    @action
-    def test(param: SampleData) -> str
-        return param.model_dump_json()
-```
-
-By doing so, the JSON Schema for `SampleData` is automatically added to the container's `definitions`, no further action required.
-
-When invoking the action, the `param` variable is also automatically parsed into an object of the respective model type. However, this ONLY works when the type hint is either the plain type (e.g. `param: SampleData`) or a list of that type (e.g. `param: list[SampleData]`, and nested lists also work). Otherwise, the variable will remain a plain dict.
-
 ## Testing & Deployment
 
 ### Build and Deploy the Agent Container (recommended)
@@ -82,6 +58,30 @@ docker container run -d -p 8000:8000 \
 ### Run the Agent Container Locally
 
 Alternatively, you can directly start your agent container by running `python main.py` from the root directory. This will start a FastAPI server and make the endpoints of the agent available for testing at http://localhost:8082/docs, assuming you haven't customized the port in the `run()` function.
+
+## Custom Type Definitions
+
+You can automatically add the JSON Schema for custom types to the containers `definitions` by annotating any action parameter with a type hint for a pydantic `BaseModel` subclass.
+
+Example:
+```python
+from pydantic import BaseModel
+
+
+class SampleData(BaseModel):
+    pass
+
+
+class TestAgent(AbstractAgent):
+    
+    @action
+    def test(param: SampleData) -> str
+        return param.model_dump_json()
+```
+
+By doing so, the JSON Schema for `SampleData` is automatically added to the container's `definitions`, no further action required.
+
+When invoking the action, the `param` variable is also automatically parsed into an object of the respective model type. However, this ONLY works when the type hint is either the plain type (e.g. `param: SampleData`) or a list of that type (e.g. `param: list[SampleData]`, and nested lists also work). Otherwise, the variable will remain a plain dict.
 
 ## Environment Variables
 
