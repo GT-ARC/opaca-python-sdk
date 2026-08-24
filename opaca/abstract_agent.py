@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
-from pydantic import ValidationError, BaseModel
+from pydantic import ValidationError
 import uuid
 import logging
 
@@ -223,9 +223,7 @@ class AbstractAgent:
         """
         models = self.container.models
 
-        def parse_model(value: Any, param: Parameter | Parameter.ArrayItems | None) -> Any:
-            if param is None: return value
-
+        def parse_model(value: Any, param: Parameter | Parameter.ArrayItems) -> Any:
             if param.type == 'array':
                 if param.items is None or not isinstance(value, list): return value
                 return [parse_model(item, param.items) for item in value]
@@ -237,10 +235,10 @@ class AbstractAgent:
             return value
 
         def parse_param(name: str, value: Any) -> Any:
-            param = self.actions[action].parameters[name]
             try:
+                param = self.actions[action].parameters[name]
                 return parse_model(value, param)
-            except ValidationError as e:
+            except (KeyError, ValidationError) as e:
                 log.error(e)
                 return value
 
