@@ -38,9 +38,9 @@ class TestAgent(AbstractAgent):
         return param.model_dump_json()
 ```
 
-By doing so, the JSON Schema for `SampleData` is automatically added to the container's `definitions`, no further action required. This works for arbitrarily nested model classes.
+By doing so, the JSON Schema for `SampleData` is automatically added to the container's `definitions`, no further action required.
 
-When invoking the action, the `param` variable is also automatically parsed into an object of the respective model type. However, this ONLY works when the type hint is either the plain type (e.g. `param: SampleData`) or a list of that type (e.g. `param: list[SampleData`). Otherwise, the variable will remain a plain dict.
+When invoking the action, the `param` variable is also automatically parsed into an object of the respective model type. However, this ONLY works when the type hint is either the plain type (e.g. `param: SampleData`) or a list of that type (e.g. `param: list[SampleData]`, and nested lists also work). Otherwise, the variable will remain a plain dict.
 
 ## Testing & Deployment
 
@@ -82,57 +82,6 @@ docker container run -d -p 8000:8000 \
 ### Run the Agent Container Locally
 
 Alternatively, you can directly start your agent container by running `python main.py` from the root directory. This will start a FastAPI server and make the endpoints of the agent available for testing at http://localhost:8082/docs, assuming you haven't customized the port in the `run()` function.
-
-## Custom Data Types
-
-If your agent is using custom data types as either input or output parameters, you need to register them in the `resources/container.json` file in OpenAPI format. It is recommended to define custom data types with the `BaseModel` class from the [Pydantic](https://pydantic-docs.helpmanual.io/) library.
-
-Here is an example for a custom data type `MyType`:
-
-In your agent class:
-
-```python
-from pydantic import BaseModel
-from typing import List
-
-class MyType(BaseModel):
-    var_a: str
-    var_b: int = 0
-    var_c: List[str] = None
-```
-
-In the `resources/container.json` file:
-
-```json
-{
-  "imageName": "<your-container-name>",
-  "definitions": {
-    "MyType": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MyType",
-      "type": "object",
-      "properties": {
-        "var_a": {
-          "description": "Optional description of var_a.",
-          "type": "string"
-        },
-        "var_b": {
-          "description": "Optional description of var_b.",
-          "type": "integer"
-        },
-        "var_c": {
-          "description": "Optional description of var_c.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": ["var_a"]
-    }
-  }
-}
-```
 
 ## Environment Variables
 
