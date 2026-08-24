@@ -7,7 +7,7 @@ from .abstract_agent import AbstractAgent
 from .client import AsyncOpacaClient
 
 
-def run(container: Container,
+def run(container: 'Container',
         title: str | None = None,
         host: str | None = None,
         port: int | None = None,
@@ -37,3 +37,6 @@ def run(container: Container,
 
     import uvicorn
     uvicorn.run(app, host=host, port=port)
+
+
+del _FastAPI

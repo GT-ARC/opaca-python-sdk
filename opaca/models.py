@@ -19,14 +19,15 @@ class Parameter(BaseModel):
         items: Optional['Parameter.ArrayItems'] = None
 
     @staticmethod
-    def list_of(type: str, required: bool = True) -> 'Parameter':
+    def list_of(type: str, default: Optional[Any] = None) -> 'Parameter':
         """
         Utility function for making a shallow array parameter.
         """
-        return Parameter(type='array', required=required, items=Parameter.ArrayItems(type=type))
+        return Parameter(type='array', required=(default is None), defaultValue=default, items=Parameter.ArrayItems(type=type))
 
     type: str
     required: bool = True
+    defaultValue: Optional[Any] = None
     items: Optional[ArrayItems] = None
 
 

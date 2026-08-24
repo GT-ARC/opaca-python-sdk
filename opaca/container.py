@@ -1,31 +1,40 @@
 import os
 import uuid
+import logging
 from datetime import datetime, timezone
 from inspect import iscoroutinefunction
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 import json
+import httpx
+from starlette.responses import FileResponse
 
 from pydantic import BaseModel
 
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
-from .utils import http_error
+from .utils import http_error, make_file_response
+
+
+log = logging.getLogger(__name__)
 
 
 class Container:
 
     def __init__(self, path_to_image_file: str) -> None:
-        self.container_id = os.getenv('CONTAINER_ID', '')
-        self.platform_url = os.getenv('PLATFORM_URL', '')
-        self.token = os.getenv('TOKEN', '')
-        self.owner = os.getenv('OWNER', '')
-
+        self.container_id: str = os.getenv('CONTAINER_ID', '')
+        self.platform_url: str = os.getenv('PLATFORM_URL', '')
+        self.token: str = os.getenv('TOKEN', '')
+        self.owner: str = os.getenv('OWNER', '')
+        self.own_url: Optional[str] = None
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
         self.models: Dict[str, Any] = {}
+
+        self._exposed_files: Dict[str, Path] = {}
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -197,3 +206,48 @@ class Container:
         return { param.name: os.getenv(param.name, param.defaultValue)
                  for param in self.image.parameters
                  if include_confidential or not param.confidential }
+
+    def find_own_url(self):
+        """
+        Find the container's own base url, including the API port.
+
+        Should replace this with SyncOpacaClient call once that exists.
+        """
+        if not self.platform_url:
+            return f'http://localhost:{self.image.apiPort}'
+
+        if self.own_url is None:
+            try:
+                containers = httpx.get(f"{self.platform_url}/containers").json()
+                connectivity = next(c["connectivity"] for c in containers if c["containerId"] == self.container_id)
+                self.own_url = f'{connectivity["publicUrl"]}:{connectivity["apiPortMapping"]}'
+            except httpx.RequestError as e:
+                log.error('Failed to request own URL from the OPACA runtime platform. '
+                          'Make sure that the container is known by the platform.')
+                raise e
+
+        return self.own_url
+
+    def expose_file(self, path: str | Path) -> str:
+        """Helper function to publicly expose a file
+        via the '/files/{file_id}' route."""
+        file_id = str(uuid.uuid4())
+        file_path = Path(path)
+        if not file_path.is_file():
+            raise FileNotFoundError(f'File not found: {file_path}')
+        self._exposed_files[file_id] = file_path
+        return file_id
+
+    def get_file_url(self, file_id: str) -> str:
+        """Helper function to get an exposed file's full URL."""
+        return f'{self.find_own_url()}/files/{file_id}'
+
+    def _serve_exposed_file(self, file_id: str) -> FileResponse:
+        error_msg = 'File not found.'
+        if file_id not in self._exposed_files:
+            raise http_error(404, error_msg)
+        file_path = self._exposed_files[file_id]
+        if not file_path.is_file():
+            self._exposed_files.pop(file_id)
+            raise http_error(404, error_msg)
+        return make_file_response(self._exposed_files[file_id])

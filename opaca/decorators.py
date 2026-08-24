@@ -269,6 +269,7 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
     args = get_args(hint)
 
     required = default is inspect.Parameter.empty
+    default_value = None if (default is inspect.Parameter.empty) else default
 
     # Handle NoneType
     if hint is None:
@@ -299,5 +300,6 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
     return Parameter(
         type=_type,
         required=required,
+        defaultValue=default_value,
         items=resolve_array_items(hint) if _type == "array" else None,
     )

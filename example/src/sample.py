@@ -1,10 +1,11 @@
 from time import sleep
-from typing import Dict, Callable
+from typing import Dict, Callable, Any
 from fastapi import HTTPException
+from pydantic import BaseModel
 
 from opaca import AbstractAgent, action, stream
 from opaca.models import Message, StreamDescription, Parameter, LoginMsg
-from pydantic import BaseModel
+from opaca.utils import http_error
 
 
 class SampleData(BaseModel):
@@ -74,6 +75,29 @@ class SampleAgent(AbstractAgent):
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
         print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
         return separator.join(array)
+
+    @action(description='Returns the data.')
+    def action_with_defaults(self, text: str = 'Text', number: int = 123) -> Any:
+        return {
+            'text': text,
+            'number': number
+        }
+
+    @action
+    def expose_resource_file(self, file_name: str) -> str:
+        """
+        Expose a file from the resources/ directory via the
+        /files/{file_id} route using the expose_file function.
+
+        Call for example with file_name=container.json to
+        get a URL where that file is directly available
+        for download.
+        """
+        try:
+            file_id = self.expose_file(f'resources/{file_name}')
+            return self.get_file_url(file_id)
+        except FileNotFoundError:
+            raise http_error(404, f'File not found: resources/{file_name}')
 
     # Streams
 

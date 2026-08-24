@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
 from pydantic import ValidationError, BaseModel
@@ -98,6 +99,11 @@ class AbstractAgent:
                 if not login_token:
                     raise http_error(401, 'Missing credentials')
                 parameters['login_token'] = login_token
+
+            # Inject default values in case the action was defined via self.add_action(...)
+            for param_name, param in action.parameters.items():
+                if param.defaultValue is not None and param_name not in parameters:
+                    parameters[param_name] = param.defaultValue
 
             if iscoroutinefunction(callback):
                 return await callback(**parameters)
@@ -247,3 +253,25 @@ class AbstractAgent:
             name: parse_param(name, value)
             for name, value in parameters.items()
         }
+
+    def expose_file(self, path: str | Path) -> str:
+        """
+        Expose a file to be publicly available
+        via the '/files/{file_id}' route.
+
+        Call `self.get_file_url(file_id)` to get the full URL where
+        the file is available.
+
+        :param path: The path to the file.
+        :return: The new file_id for the file.
+        """
+        return self.container.expose_file(path)
+
+    def get_file_url(self, file_id: str) -> str:
+        """
+        Get the full URL for an exposed file.
+
+        This is only usable AFTER the container is online and the
+        platform was able to communicate with it.
+        """
+        return self.container.get_file_url(file_id)

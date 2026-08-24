@@ -2,6 +2,21 @@
 
 All changes to the opaca package will be documented in this file.
 
+## [0.0.8] - 2026-07-15
+
+### Added
+
+- Action parameters can now declare default values. Any omitted parameters are automatically filled in before invoking the action.
+- New `expose_file(path)` method on `AbstractAgent` (and `Container`) to make a file publicly available via the built-in `GET /files/{file_id}` route. Also added a `get_file_url(file_id)` helper to retrieve the full URL of an exposed file.
+- `AsyncOpacaClient` now accepts a `timeout` parameter at construction time as the default for all requests. You can also override this with an individual timeout per request.
+- `get_agents()` and `get_containers()` on `AsyncOpacaClient` now accept an `include_connected` parameter to include agents/containers from connected platforms.
+
+### Changed
+
+- `AsyncOpacaClient` default timeout changed from a hardcoded `10s` to `None` (no timeout).
+
+
+
 ## [0.0.7] - 2026-04-08
 
 ### Added
