@@ -91,18 +91,25 @@ def register_streams(agent: 'AbstractAgent') -> None:
             callback=getattr(agent, name),
         )
 
+def extract_models(hint: Any):
+    if isinstance(hint, type) and issubclass(hint, BaseModel):
+        yield hint
+    else:
+        for arg in get_args(hint):
+            yield from extract_models(arg)
+
+
 def update_definitions(agent: 'AbstractAgent') -> None:
     """
     Find parameter/result classes that extend Pydantic's BaseModel and auto-generate
     JSON-Schema for those and add it to the definitions section in container.json.
     """
     base_models = {
-        arg
+        m
         for _, func in inspect.getmembers(agent, predicate=inspect.ismethod)
         if getattr(func, '_is_action', False)
         for v in get_type_hints(func).values()
-        for arg in (get_args(v) if get_args(v) else [v])
-        if isinstance(arg, type) and issubclass(arg, BaseModel)
+        for m in extract_models(v)
     }
 
     definitions = agent.container.image.definitions
