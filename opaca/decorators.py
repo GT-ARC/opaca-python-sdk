@@ -194,14 +194,13 @@ def parse_name(func: Callable, func_name: str) -> str:
     return action_name
 
 
-def parse_description(func: Callable) -> str | None:
+def parse_description(func: Callable) -> str:
     """
     Parse the description of the decorated function into a proper action/stream description.
     """
-    description = getattr(func, '_description', '')
-    if not description and func.__doc__:
-        description = inspect.getdoc(func)
-    return description
+    description: str = getattr(func, '_description', '')
+    docstring: str = inspect.getdoc(func) or ''
+    return description or docstring
 
 
 type_mapping = {
