@@ -104,6 +104,21 @@ def update_definitions(agent: 'AbstractAgent') -> None:
     Find parameter/result classes that extend Pydantic's BaseModel and auto-generate
     JSON-Schema for those and add it to the definitions section in container.json.
     """
+    def add_schema(model_class: type[BaseModel]) -> None:
+        root_name = model_class.__name__
+        schema = model_class.model_json_schema(ref_template='#/components/schemas/{model}')
+        defs = schema.pop('$defs', {})
+
+        if schema.get('$ref') == f'#/components/schemas/{root_name}' and root_name in defs:
+            schema = defs.pop(root_name)
+
+        for definition_name, definition in defs.items():
+            existing = definitions.get(definition_name)
+            if existing is None:
+                definitions[definition_name] = definition
+
+        definitions[root_name] = schema
+
     base_models = {
         m
         for _, func in inspect.getmembers(agent, predicate=inspect.ismethod)
@@ -116,7 +131,7 @@ def update_definitions(agent: 'AbstractAgent') -> None:
     for cls in base_models:
         try:
             if cls.__name__ not in definitions:
-                definitions[cls.__name__] = cls.model_json_schema()
+                add_schema(cls)
                 agent.container.models[cls.__name__] = cls
         except Exception as e:
             log.error(f'Failed to add custom type {cls} to container definitions: {e}')
