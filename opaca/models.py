@@ -4,7 +4,7 @@ from enum import Enum
 
 
 # Custom type hint for POST streams
-StreamContent = Iterable[str | bytes] | AsyncIterable[str | bytes]
+StreamContent = Iterable[bytes] | AsyncIterable[bytes]
 
 
 class Message(BaseModel):

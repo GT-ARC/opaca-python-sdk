@@ -80,7 +80,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
-    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse:
+    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse | None:
         """
         GET a stream from the specified agent.
         """
@@ -119,6 +119,11 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         result = container.invoke_stream(name, mode, login_token) if agent_id is None \
             else container.invoke_agent_stream(name, mode, agent_id, login_token)
+
+        # workaround for empty response, e.g. from POST streams
+        if not result: result = iter([])
+
         return StreamingResponse(result, media_type='application/octet-stream')
+
 
     return app

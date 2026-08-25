@@ -118,7 +118,7 @@ class Container:
             mode: StreamDescription.Mode,
             agent_id: str = '',
             login_token: str | None = None
-    ) -> Optional[StreamContent]:
+    ) -> StreamContent | None:
         """
         GET a stream from or POST a stream to the specified agent.
         """
