@@ -74,7 +74,7 @@ class Container:
             self,
             name: str,
             parameters: Dict[str, Any],
-            login_token: str = None
+            login_token: str | None = None
     ) -> None:
         """
         Invoke action on any agent that knows the action.
@@ -89,7 +89,7 @@ class Container:
             name: str,
             agent_id: str,
             parameters: Dict[str, Any],
-            login_token: str = None
+            login_token: str | None = None
     ) -> Any:
         """
         Invoke action on the specified agent.
@@ -102,8 +102,8 @@ class Container:
             self,
             name: str,
             mode: StreamDescription.Mode,
-            login_token: str = None
-    ) -> StreamContent:
+            login_token: str | None = None
+    ) -> StreamContent | None:
         """
         GET a stream from or POST a stream to any agent that knows the stream.
         """
@@ -117,7 +117,7 @@ class Container:
             name: str,
             mode: StreamDescription.Mode,
             agent_id: str = '',
-            login_token: str = None
+            login_token: str | None = None
     ) -> Optional[StreamContent]:
         """
         GET a stream from or POST a stream to the specified agent.
@@ -172,7 +172,7 @@ class Container:
                 agent.handle_login(msg)
         return token
 
-    async def handle_logout(self, login_token: str = None) -> bool:
+    async def handle_logout(self, login_token: str | None = None) -> bool:
         if not login_token:
             return False
         for agent in self.agents.values():
@@ -237,9 +237,12 @@ class Container:
 
     def get_file_url(self, file_id: str) -> str:
         """Helper function to get an exposed file's full URL."""
-        return f'{self.find_own_url()}/files/{file_id}'
+        own_url = self.find_own_url()
+        if not own_url:
+            raise http_error(400,f'Could not find own URL.')
+        return f'{own_url}/files/{file_id}'
 
-    def _serve_exposed_file(self, file_id: str) -> FileResponse:
+    def serve_exposed_file(self, file_id: str) -> FileResponse:
         error_msg = 'File not found.'
         if file_id not in self._exposed_files:
             raise http_error(404, error_msg)

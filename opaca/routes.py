@@ -40,7 +40,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/send/{agentId}')
-    async def send_message(agentId: str, message: Message):
+    async def send_message(agentId: str, message: Message) -> None:
         """
         Send a message to the specified agent.
         """
@@ -48,7 +48,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/broadcast/{channel}')
-    async def broadcast(channel: str, message: Message):
+    async def broadcast(channel: str, message: Message) -> None:
         """
         Broadcast a message to all agents that listen on the channel.
         """
@@ -56,7 +56,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/invoke/{action}', response_model=Any)
-    async def invoke_action(action: str, parameters: Dict[str, Any], ContainerLoginToken: Annotated[str | None, Header()] = None):
+    async def invoke_action(action: str, parameters: Dict[str, Any], ContainerLoginToken: Annotated[str | None, Header()] = None) -> Any:
         """
         Invoke the specified action on any agent that knows the action.
         """
@@ -64,7 +64,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.post('/invoke/{action}/{agentId}', response_model=Any)
-    async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any], ContainerLoginToken: Annotated[str | None, Header()] = None):
+    async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any], ContainerLoginToken: Annotated[str | None, Header()] = None) -> Any:
         """
         Invoke an action on a specific agent.
         """
@@ -72,7 +72,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.get('/stream/{stream}', response_class=StreamingResponse)
-    async def get_stream(stream: str, ContainerLoginToken: Annotated[str | None, Header()] = None):
+    async def get_stream(stream: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse:
         """
         GET a stream from any agent.
         """
@@ -80,34 +80,40 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
-    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None):
+    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse:
         """
         GET a stream from the specified agent.
         """
         return make_stream_response(stream, StreamDescription.Mode.GET, agent_id, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
 
     @app.post('/login')
-    async def handle_login(login: Login):
+    async def handle_login(login: Login) -> str:
         """
         Provide login credentials required for actions requiring authentication.
         """
         return await container.handle_login(login)
 
     @app.post('/logout')
-    async def handle_logout(ContainerLoginToken: Annotated[str | None, Header()] = None):
+    async def handle_logout(ContainerLoginToken: Annotated[str | None, Header()] = None) -> bool:
         """
         Performs a logout operation.
         """
-        return await container.handle_logout(ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+        token = ContainerLoginToken.strip('"') if ContainerLoginToken else None
+        return await container.handle_logout(token)
 
     @app.get('/files/{file_id}', response_class=FileResponse)
     async def get_file(file_id: str) -> FileResponse:
         """
         GET a file exposed via the expose_file() function.
         """
-        return container._serve_exposed_file(file_id)
+        return container.serve_exposed_file(file_id)
 
-    def make_stream_response(name: str, mode: StreamDescription.Mode, agent_id: str = None, login_token: str = None) -> StreamingResponse:
+    def make_stream_response(
+            name: str,
+            mode: StreamDescription.Mode,
+            agent_id: str | None = None,
+            login_token: str | None = None
+    ) -> StreamingResponse:
         """
         Converts the byte stream from the stream invocation into the correct response format.
         """
