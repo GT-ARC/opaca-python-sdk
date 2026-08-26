@@ -107,11 +107,7 @@ def update_definitions(agent: 'AbstractAgent') -> None:
     JSON-Schema for those and add it to the definitions section in container.json.
     """
     def make_schema(model_class : type[BaseModel]) -> dict:
-        class OpenApi30JsonSchema(GenerateJsonSchema):
-            def nullable_schema(self, schema: core_schema.NullableSchema) -> JsonSchemaValue:
-                inner = self.generate_inner(schema['schema'])
-                return {**inner, 'nullable': True}
-        return model_class.model_json_schema(schema_generator=OpenApi30JsonSchema)
+        return model_class.model_json_schema()
 
     base_models = {
         m
