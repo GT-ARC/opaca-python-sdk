@@ -6,6 +6,8 @@ import logging
 from typing import (Optional, Callable, get_type_hints, Dict,
                     Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING)
 from pydantic import BaseModel
+from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
+from pydantic_core import core_schema
 
 from .models import StreamDescription, Parameter
 
@@ -104,6 +106,13 @@ def update_definitions(agent: 'AbstractAgent') -> None:
     Find parameter/result classes that extend Pydantic's BaseModel and auto-generate
     JSON-Schema for those and add it to the definitions section in container.json.
     """
+    def make_schema(model_class : type[BaseModel]) -> dict:
+        class OpenApi30JsonSchema(GenerateJsonSchema):
+            def nullable_schema(self, schema: core_schema.NullableSchema) -> JsonSchemaValue:
+                inner = self.generate_inner(schema['schema'])
+                return {**inner, 'nullable': True}
+        return model_class.model_json_schema(schema_generator=OpenApi30JsonSchema)
+
     base_models = {
         m
         for _, func in inspect.getmembers(agent, predicate=inspect.ismethod)
@@ -116,7 +125,7 @@ def update_definitions(agent: 'AbstractAgent') -> None:
     for cls in base_models:
         try:
             if cls.__name__ not in definitions:
-                definitions[cls.__name__] = cls.model_json_schema()
+                definitions[cls.__name__] = make_schema(cls)
                 agent.container.models[cls.__name__] = cls
         except Exception as e:
             log.error(f'Failed to add custom type {cls} to container definitions: {e}')
