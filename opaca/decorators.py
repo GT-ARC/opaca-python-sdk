@@ -4,10 +4,8 @@ import inspect
 import re
 import logging
 from typing import (Optional, Callable, get_type_hints, Dict,
-                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING)
+                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator)
 from pydantic import BaseModel
-from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
-from pydantic_core import core_schema
 
 from .models import StreamDescription, Parameter
 
@@ -18,7 +16,13 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-def action(_func: Optional[Callable] = None, *, name: str = '', description: str = '', auth: bool = False):
+def action(
+        _func: Optional[Callable] = None,
+        *,
+        name: str = '',
+        description: str = '',
+        auth: bool = False
+) -> Callable:
     def decorator(func: Callable):
         func._is_action = True
         func._name = name
@@ -29,7 +33,13 @@ def action(_func: Optional[Callable] = None, *, name: str = '', description: str
     return decorator(_func) if _func else decorator
 
 
-def stream(*, mode: StreamDescription.Mode, name: str = '', description: str = '', auth: bool = False):
+def stream(
+        *,
+        mode: StreamDescription.Mode,
+        name: str = '',
+        description: str = '',
+        auth: bool = False
+) -> Callable:
     def decorator(func: Callable):
         func._is_stream = True
         func._mode = mode
@@ -93,7 +103,8 @@ def register_streams(agent: 'AbstractAgent') -> None:
             callback=getattr(agent, name),
         )
 
-def extract_models(hint: Any):
+
+def extract_models(hint: Any) -> Iterator[Any]:
     if isinstance(hint, type) and issubclass(hint, BaseModel):
         yield hint
     else:
@@ -126,7 +137,8 @@ def update_definitions(agent: 'AbstractAgent') -> None:
         except Exception as e:
             log.error(f'Failed to add custom type {cls} to container definitions: {e}')
 
-def check_for_token(name: str, params: Dict[str, Parameter]):
+
+def check_for_token(name: str, params: Dict[str, Parameter]) -> None:
     if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
                for name, p in list(params.items())):
         raise TypeError(f'The method {name} was declared with "auth" and therefore needs to define '
@@ -208,7 +220,7 @@ def parse_description(func: Callable) -> str:
     return description or docstring
 
 
-type_mapping = {
+type_mapping: dict[type, str] = {
     int: "integer",
     float: "number",
     str: "string",
@@ -219,7 +231,7 @@ type_mapping = {
 }
 
 
-type_priority = {
+type_priority: dict[str, int] = {
     "null": 0,
     "boolean": 1,
     "integer": 2,

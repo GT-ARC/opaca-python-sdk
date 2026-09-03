@@ -80,7 +80,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
-    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse | None:
+    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse:
         """
         GET a stream from the specified agent.
         """

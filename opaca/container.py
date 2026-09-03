@@ -9,8 +9,6 @@ import json
 import httpx
 from starlette.responses import FileResponse
 
-from pydantic import BaseModel
-
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
