@@ -9,6 +9,8 @@ import json
 import httpx
 from starlette.responses import FileResponse
 
+from pydantic import BaseModel
+
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
@@ -30,6 +32,7 @@ class Container:
         self.agents: Dict[str, AbstractAgent] = {}
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
+        self.models: Dict[str, Any] = {}
 
         self._exposed_files: Dict[str, Path] = {}
 

@@ -2,13 +2,20 @@ import ast
 import textwrap
 import inspect
 import re
+import logging
 from typing import (Optional, Callable, get_type_hints, Dict,
                     Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING)
+from pydantic import BaseModel
+from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
+from pydantic_core import core_schema
 
 from .models import StreamDescription, Parameter
 
 if TYPE_CHECKING:
     from .abstract_agent import AbstractAgent
+
+
+log = logging.getLogger(__name__)
 
 
 def action(_func: Optional[Callable] = None, *, name: str = '', description: str = '', auth: bool = False):
@@ -49,6 +56,8 @@ def register_actions(agent: 'AbstractAgent') -> None:
         if getattr(func, '_auth', False):
             check_for_token(action_name, params)
 
+        log.debug(f'REGISTER ACTION: {agent.agent_id} {name} {action_name} {description}, {params}, {return_type}')
+
         agent.add_action(
             name=action_name,
             description=description,
@@ -73,7 +82,9 @@ def register_streams(agent: 'AbstractAgent') -> None:
         if getattr(func, '_auth', False):
             check_for_token(stream_name, params)
 
-        mode = getattr(func, '_mode', '')
+        mode = getattr(func, '_mode', StreamDescription.Mode.GET)
+
+        log.debug(f'REGISTER STREAM: {agent.agent_id} {name} {stream_name} {mode} {description}, {params}, {return_type}')
 
         agent.add_stream(
             name=stream_name,
@@ -82,6 +93,38 @@ def register_streams(agent: 'AbstractAgent') -> None:
             callback=getattr(agent, name),
         )
 
+def extract_models(hint: Any):
+    if isinstance(hint, type) and issubclass(hint, BaseModel):
+        yield hint
+    else:
+        for arg in get_args(hint):
+            yield from extract_models(arg)
+
+
+def update_definitions(agent: 'AbstractAgent') -> None:
+    """
+    Find parameter/result classes that extend Pydantic's BaseModel and auto-generate
+    JSON-Schema for those and add it to the definitions section in container.json.
+    """
+    def make_schema(model_class : type[BaseModel]) -> dict:
+        return model_class.model_json_schema()
+
+    base_models = {
+        m
+        for _, func in inspect.getmembers(agent, predicate=inspect.ismethod)
+        if getattr(func, '_is_action', False)
+        for v in get_type_hints(func).values()
+        for m in extract_models(v)
+    }
+
+    definitions = agent.container.image.definitions
+    for cls in base_models:
+        try:
+            if cls.__name__ not in definitions:
+                definitions[cls.__name__] = make_schema(cls)
+                agent.container.models[cls.__name__] = cls
+        except Exception as e:
+            log.error(f'Failed to add custom type {cls} to container definitions: {e}')
 
 def check_for_token(name: str, params: Dict[str, Parameter]):
     if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
@@ -160,10 +203,9 @@ def parse_description(func: Callable) -> str:
     """
     Parse the description of the decorated function into a proper action/stream description.
     """
-    description = getattr(func, '_description', '')
-    if not description and func.__doc__:
-        description = inspect.getdoc(func)
-    return description
+    description: str = getattr(func, '_description', '')
+    docstring: str = inspect.getdoc(func) or ''
+    return description or docstring
 
 
 type_mapping = {

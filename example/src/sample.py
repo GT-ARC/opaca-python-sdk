@@ -1,10 +1,27 @@
 from time import sleep
 from typing import Dict, Callable, Any
 from fastapi import HTTPException
+from pydantic import BaseModel
 
 from opaca import AbstractAgent, action, stream
 from opaca.models import Message, StreamDescription, Parameter, LoginMsg
 from opaca.utils import http_error
+
+
+class SampleDataParam(BaseModel):
+    name: str = ''
+    age: int = 0
+    gender: str | None = None
+    children: list['SampleDataParam'] = []
+
+
+class SampleDataInList(BaseModel):
+    person: SampleDataParam
+
+
+class SampleDataReturn(BaseModel):
+    param: SampleDataParam
+    inlist: list[list[SampleDataInList]]
 
 
 class SampleAgent(AbstractAgent):
@@ -55,6 +72,13 @@ class SampleAgent(AbstractAgent):
         print(f'{self.agent_id} executing time_consuming action, taking approx {1 + sleep_time} seconds')
         sleep(1 + sleep_time)
         return text
+
+    @action
+    def action_with_data_class(self, param: SampleDataParam, inlist: list[list[SampleDataInList]]) -> SampleDataReturn:
+        """
+        No-op action for testing/showcasing JSON-Schema generation for Pydantic data classes
+        """
+        return SampleDataReturn(param=param, inlist=inlist)
 
     @action(name='ConcatenateArray', description='Concatenates the given array to a string and returns the result.')
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
