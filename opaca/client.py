@@ -16,14 +16,14 @@ TimeoutType = float | int | Timeout | None
 
 class AsyncOpacaClient:
 
-    def __init__(self, url: str, timeout: TimeoutType = Timeout.NOT_SET) -> None:
+    def __init__(self, url: str | None = None, timeout: TimeoutType = Timeout.NOT_SET) -> None:
         """
         A client for asynchronous interaction with an OPACA Runtime Platform.
 
         :param url: The URL of the OPACA Runtime Platform.
         :param timeout: The default timeout for requests.
         """
-        self.url: str = url
+        self.url: str | None = url
         self.token: str | None = None
         self.container_tokens: dict[str, str] = {}
         self.timeout: TimeoutType = None if timeout is Timeout.NOT_SET else timeout
@@ -35,26 +35,26 @@ class AsyncOpacaClient:
             username: str,
             password: str,
             timeout: TimeoutType = Timeout.NOT_SET,
-    ) -> None:
+    ) -> str:
         """
         Acquire a login token from the platform. The token is also cached within
         the client itself and automatically added to all request headers.
         """
+        self.token = None
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._request('POST', '/login', body=body, timeout=timeout)
-        self.token = response.text
-        return self.token
+        token = response.text
+        self.token = token
+        return token
 
-    async def renew_token(
-            self,
-            timeout: TimeoutType = Timeout.NOT_SET
-    ) -> None:
+    async def renew_token(self, timeout: TimeoutType = Timeout.NOT_SET) -> str:
         """
         Update the cached platform login token.
         """
         response = await self._request('GET', '/token', timeout=timeout)
-        self.token = response.text
-        return self.token
+        token = response.text
+        self.token = token
+        return token
 
     async def container_login(
             self,
@@ -68,8 +68,9 @@ class AsyncOpacaClient:
         """
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._request('POST', f'/containers/login/{container_id}', body=body, timeout=timeout)
-        self.container_tokens[container_id] = response.text
-        return self.container_tokens[container_id]
+        token = response.text
+        self.container_tokens[container_id] = token
+        return token
 
     async def container_logout(self, container_id: str) -> bool:
         if container_id not in self.container_tokens: return False
@@ -184,7 +185,7 @@ class AsyncOpacaClient:
     async def post_stream(
             self,
             stream: str,
-            content: StreamContent = None,
+            content: StreamContent | None = None,
             agent_id: str | None = None,
             container_id: str | None = None,
             forward: bool = True,
@@ -297,6 +298,8 @@ class AsyncOpacaClient:
             params: QueryParams | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> httpx.Response:
+        if not self.url:
+            raise UrlNotSetException(f'AsyncOpacaClient: Platform URL not set')
         timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
         async with httpx.AsyncClient() as client:
             response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
@@ -307,10 +310,12 @@ class AsyncOpacaClient:
             self,
             method: str,
             path: str,
-            content: StreamContent = None,
+            content: StreamContent | None = None,
             params: QueryParams | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> AsyncIterator[bytes]:
+        if not self.url:
+            raise UrlNotSetException(f'AsyncOpacaClient: Platform URL not set')
         timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
         async with httpx.AsyncClient() as client:
             async with client.stream(method, f'{self.url}{path}', content=content, params=params, headers=self._headers(), timeout=timeout) as response:
@@ -324,7 +329,6 @@ class AsyncOpacaClient:
             headers['Authorization'] = f'Bearer {self.token}'
         return headers
 
-
 def _build_query_params(**kwargs) -> QueryParams | None:
     filtered_params = {
         param: value
@@ -334,3 +338,7 @@ def _build_query_params(**kwargs) -> QueryParams | None:
     if len(filtered_params) == 0:
         return None
     return QueryParams(**filtered_params)
+
+
+class UrlNotSetException(RuntimeError):
+    pass

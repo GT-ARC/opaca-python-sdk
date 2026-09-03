@@ -70,7 +70,7 @@ class AbstractAgent:
             callback=callback,
         )
 
-    def remove_action(self, name: str):
+    def remove_action(self, name: str) -> None:
         """
         Removes an action from this agent's action list.
         """
@@ -81,7 +81,7 @@ class AbstractAgent:
             self,
             name: str,
             parameters: Dict[str, Any],
-            login_token: str = None
+            login_token: str | None = None
     ) -> Optional[Any]:
         """
         Invoke action on this agent.
@@ -150,7 +150,7 @@ class AbstractAgent:
             self,
             name: str,
             mode: StreamDescription.Mode,
-            login_token: str = None
+            login_token: str | None = None
     ) -> StreamContent | None:
         """
         GET a stream response from this agent or POST a stream to it.
