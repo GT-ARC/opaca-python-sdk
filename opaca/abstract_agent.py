@@ -1,14 +1,19 @@
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
+from pydantic import ValidationError
 import uuid
+import logging
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
 from .utils import http_error
-from .decorators import register_actions, register_streams
+from .decorators import register_actions, register_streams, update_definitions
 
 if TYPE_CHECKING:
     from .container import Container
+
+
+log = logging.getLogger(__name__)
 
 
 class AbstractAgent:
@@ -31,6 +36,7 @@ class AbstractAgent:
         self.container.add_agent(self)
         register_actions(self)
         register_streams(self)
+        update_definitions(self)
 
     def get_action(self, name: str) -> ActionDescription:
         """
@@ -86,6 +92,8 @@ class AbstractAgent:
         try:
             action = self.get_action(name)
             callback = action.callback
+
+            parameters = self.parse_custom_types(name, parameters)
 
             if getattr(callback, '_auth', False):
                 if not login_token:
@@ -208,6 +216,36 @@ class AbstractAgent:
             actions=[action for action in self.actions.values()],
             streams=[stream for stream in self.streams.values()],
         )
+
+    def parse_custom_types(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
+        """
+        Parse any parameters that are defined as custom types into the corresponding model class.
+        """
+        models = self.container.models
+
+        def parse_model(value: Any, param: Parameter | Parameter.ArrayItems) -> Any:
+            if param.type == 'array':
+                if param.items is None or not isinstance(value, list): return value
+                return [parse_model(item, param.items) for item in value]
+
+            if param.type in models:
+                cls = models[param.type]
+                return cls.model_validate(value)
+
+            return value
+
+        def parse_param(name: str, value: Any) -> Any:
+            try:
+                param = self.actions[action].parameters[name]
+                return parse_model(value, param)
+            except (KeyError, ValidationError) as e:
+                log.error(e)
+                return value
+
+        return {
+            name: parse_param(name, value)
+            for name, value in parameters.items()
+        }
 
     def expose_file(self, path: str | Path) -> str:
         """

@@ -10,7 +10,7 @@ You can install the package by running `pip install opaca` and then `import opac
 
 For an example of how to create new agents, take a look at the files in the `example/` directory. There you can find a full example setup of how to run an agent container with docker.
 
-### `@action` Decorator - Additional Notes
+### The `@action` decorator
 
 - It is required for **all input and output parameters to be annotated with type hints**. The type hints are later resolved into JSON schema to be used within HTTP requests.
 - Action methods need to be defined as **non-static**, even if they are not accessing any class attributes or methods. This is to ensure that the method can be pickled and registered as an OPACA action for that agent.
@@ -59,56 +59,29 @@ docker container run -d -p 8000:8000 \
 
 Alternatively, you can directly start your agent container by running `python main.py` from the root directory. This will start a FastAPI server and make the endpoints of the agent available for testing at http://localhost:8082/docs, assuming you haven't customized the port in the `run()` function.
 
-## Custom Data Types
+## Custom Type Definitions
 
-If your agent is using custom data types as either input or output parameters, you need to register them in the `resources/container.json` file in OpenAPI format. It is recommended to define custom data types with the `BaseModel` class from the [Pydantic](https://pydantic-docs.helpmanual.io/) library.
+You can automatically add the JSON Schema for custom types to the containers `definitions` by annotating any action parameter with a type hint for a pydantic `BaseModel` subclass.
 
-Here is an example for a custom data type `MyType`:
-
-In your agent class:
-
+Example:
 ```python
 from pydantic import BaseModel
-from typing import List
 
-class MyType(BaseModel):
-    var_a: str
-    var_b: int = 0
-    var_c: List[str] = None
+
+class SampleData(BaseModel):
+    pass
+
+
+class TestAgent(AbstractAgent):
+    
+    @action
+    def test(param: SampleData) -> str
+        return param.model_dump_json()
 ```
 
-In the `resources/container.json` file:
+By doing so, the JSON Schema for `SampleData` is automatically added to the container's `definitions`, no further action required.
 
-```json
-{
-  "imageName": "<your-container-name>",
-  "definitions": {
-    "MyType": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "MyType",
-      "type": "object",
-      "properties": {
-        "var_a": {
-          "description": "Optional description of var_a.",
-          "type": "string"
-        },
-        "var_b": {
-          "description": "Optional description of var_b.",
-          "type": "integer"
-        },
-        "var_c": {
-          "description": "Optional description of var_c.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": ["var_a"]
-    }
-  }
-}
-```
+When invoking the action, the `param` variable is also automatically parsed into an object of the respective model type. However, this ONLY works when the type hint is either the plain type (e.g. `param: SampleData`) or a list of that type (e.g. `param: list[SampleData]`, and nested lists also work). Otherwise, the variable will remain a plain dict.
 
 ## Environment Variables
 
