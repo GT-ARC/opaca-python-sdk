@@ -1,3 +1,4 @@
+import traceback
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from inspect import getdoc, iscoroutinefunction
@@ -110,11 +111,8 @@ class AbstractAgent:
             else:
                 return callback(**parameters)
 
-        except TypeError:
-            if "login_token" in parameters.keys():
-                parameters.pop("login_token")
-            msg = f'Invalid action parameters. Provided: {parameters}, Required: {self.get_action(name).parameters}'
-            raise http_error(400, msg)
+        except Exception as e:
+            raise http_error(400, f'Failed to invoke action {name!r}: {e}\n{traceback.format_exception(e)}')
 
     def get_stream(self, name: str) -> StreamDescription:
         """
