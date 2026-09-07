@@ -2,6 +2,19 @@
 
 All changes to the opaca package will be documented in this file.
 
+## [0.0.9] - 2026-09-07
+
+### Added
+
+- `BaseModel` classes that are used as the types of action parameters or return values now have their schemas auto-registered into the container's `definitions`. This also applies when they are nested in list types.
+- New sample action and `BaseModel` type to showcase the auto-registering in the example.
+- New `Connectivity` model class that was previously missing.
+
+### Fixed
+
+- Fixed error handling when invoking actions so that unrelated internal `TypeErrors` are no longer hidden behind an "invalid action parameters" message.
+- Added many missing type hints.
+
 ## [0.0.8] - 2026-07-15
 
 ### Added
