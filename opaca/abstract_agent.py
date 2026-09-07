@@ -112,10 +112,7 @@ class AbstractAgent:
                 return callback(**parameters)
 
         except Exception as e:
-            if "login_token" in parameters.keys():
-                parameters.pop("login_token")
-            msg = f'Failed to invoke action {name!r}: {e}\n{traceback.format_exception(e)}'
-            raise http_error(400, msg)
+            raise http_error(400, f'Failed to invoke action {name!r}: {e}\n{traceback.format_exception(e)}')
 
     def get_stream(self, name: str) -> StreamDescription:
         """
