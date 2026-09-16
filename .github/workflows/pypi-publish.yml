@@ -28,7 +28,7 @@ jobs:
       # 2. Setup python environment
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10" # <--- This should match the supported python version
+          python-version: "3.12" # <--- This should match the supported python version
 
       # 3. Install build dependencies
       - name: Build release distributions
