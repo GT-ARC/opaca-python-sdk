@@ -80,6 +80,10 @@ class SampleAgent(AbstractAgent):
         """
         return SampleDataReturn(param=param, inlist=inlist)
 
+    @action(description="Returns optional data")
+    def action_with_optional_data_class(self, param: SampleDataParam | None = None, inlist: list[list[SampleDataInList]] | None = None) -> SampleDataReturn:
+        return SampleDataReturn(param=param or SampleDataParam(), inlist=inlist or [])
+
     @action(name='ConcatenateArray', description='Concatenates the given array to a string and returns the result.')
     def concatenate(self, array: list[str], separator: str = ', ') -> str:
         print(f'{self.agent_id} executing concatenate with params: {array}, {separator}')
