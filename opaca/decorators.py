@@ -3,6 +3,7 @@ import textwrap
 import inspect
 import re
 import logging
+import types as base_types
 from typing import (Optional, Callable, get_type_hints, Dict,
                     Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator)
 from pydantic import BaseModel
@@ -273,7 +274,9 @@ def resolve_array_items(hint: Any) -> Parameter.ArrayItems:
 
     if origin in {list, tuple} and args:
         inner = args[0]
-        if (get_origin(inner) or inner) in {list, tuple}:
+        if _type := next(iter([arg.__name__ for arg in args if issubclass(arg, BaseModel)]), None):
+            return Parameter.ArrayItems(type=_type)
+        elif (get_origin(inner) or inner) in {list, tuple}:
             return Parameter.ArrayItems(
                 type="array",
                 items=resolve_array_items(inner),
@@ -298,24 +301,31 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
     if hint is None:
         _type = "null"
     # Handle Union types with None or Optionals (Optional[str] == Union[str, None])
-    elif origin is Union:
+    elif origin in (Union, base_types.UnionType):
         types = []
-        for arg in args:
-            if arg is type(None):
-                required = False
-            else:
+
+        # Set required to False if any "None" type is found
+        if any(arg is type(None) for arg in args):
+            required = False
+
+        # Check for custom types in the Union. Use the first one that has been found. Disregard the rest.
+        # Union[CustomType, None] --> will work ; Union[CustomType, str] --> will disregard "str"
+        if not (_type := next(iter([arg.__name__ for arg in args if issubclass(arg, BaseModel)]), None)):
+            for arg in args:
+                # Skip None types to avoid defaulting to "object"
+                if arg is type(None): continue
                 t = type_mapping.get(get_origin(arg), "object")
                 types.append(t)
 
-            # If Union includes an array for further deserialization,
-            # overwrite the current "Union" hint with the list/tuple hint
-            # This has probably some weird side effects for nested Unions/Optionals
-            if get_origin(arg) in {list, tuple}:
-                hint = arg
-        try:
-            _type = merge_json_types(types)
-        except TypeError as e:
-            raise ValueError(f'Unsupported Union types {args}: {e}')
+                # If Union includes an array for further deserialization,
+                # overwrite the current "Union" hint with the list/tuple hint
+                # This has probably some weird side effects for nested Unions/Optionals
+                if get_origin(arg) in {list, tuple}:
+                   hint = arg
+            try:
+                _type = merge_json_types(types)
+            except TypeError as e:
+                raise ValueError(f'Unsupported Union types {args}: {e}')
     else:
         # Use the custom object name if the hint is a class, otherwise use standard type names
         _type = type_mapping.get(origin, hint.__name__)
