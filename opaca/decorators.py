@@ -274,7 +274,7 @@ def resolve_array_items(hint: Any) -> Parameter.ArrayItems:
 
     if origin in {list, tuple} and args:
         inner = args[0]
-        if _type := next(iter([arg.__name__ for arg in args if issubclass(arg, BaseModel)]), None):
+        if _type := next((arg.__name__ for arg in args if issubclass(arg, BaseModel)), None):
             return Parameter.ArrayItems(type=_type)
         elif (get_origin(inner) or inner) in {list, tuple}:
             return Parameter.ArrayItems(
@@ -310,7 +310,7 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
 
         # Check for custom types in the Union. Use the first one that has been found. Disregard the rest.
         # Union[CustomType, None] --> will work ; Union[CustomType, str] --> will disregard "str"
-        if not (_type := next(iter([arg.__name__ for arg in args if issubclass(arg, BaseModel)]), None)):
+        if not (_type := next((arg.__name__ for arg in args if issubclass(arg, BaseModel)), None)):
             for arg in args:
                 # Skip None types to avoid defaulting to "object"
                 if arg is type(None): continue
