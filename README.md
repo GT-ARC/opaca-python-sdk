@@ -75,13 +75,13 @@ class SampleData(BaseModel):
 class TestAgent(AbstractAgent):
     
     @action
-    def test(param: SampleData) -> str
+    def test(param: SampleData) -> str:
         return param.model_dump_json()
 ```
 
 By doing so, the JSON Schema for `SampleData` is automatically added to the container's `definitions`, no further action required.
 
-When invoking the action, the `param` variable is also automatically parsed into an object of the respective model type. However, this ONLY works when the type hint is either the plain type (e.g. `param: SampleData`) or a list of that type (e.g. `param: list[SampleData]`, and nested lists also work). Otherwise, the variable will remain a plain dict.
+When invoking the action, the `param` variable is also automatically parsed into an object of the respective model type. However, this ONLY works when the type hint is either the plain type (e.g. `param: SampleData`), a list of that type (e.g. `param: list[SampleData]`, and nested lists also work), or an optional parameter (e.g. `param: Optional[SampleData]`). Otherwise, the variable will remain a plain dict.
 
 ## Environment Variables
 
