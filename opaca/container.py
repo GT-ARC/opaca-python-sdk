@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 import logging
@@ -10,6 +11,7 @@ import httpx
 from starlette.responses import FileResponse
 
 from .abstract_agent import AbstractAgent
+from .recurrent_task import RecurrentTask
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
 from .utils import http_error, make_file_response
@@ -31,6 +33,7 @@ class Container:
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
         self.models: Dict[str, Any] = {}
+        self.recurrent_tasks: Dict[str, RecurrentTask] = {}
 
         self._exposed_files: Dict[str, Path] = {}
 
@@ -44,6 +47,9 @@ class Container:
                 return ImageDescription.model_validate(json.load(f))
         except TypeError:
             raise http_error(500, 'Failed to load image description.')
+
+    def on_startup(self) -> None:
+        asyncio.run(self.start_recurrent_tasks())
 
     def get_agent(self, agent_id: str) -> AbstractAgent:
         """
@@ -252,3 +258,13 @@ class Container:
             self._exposed_files.pop(file_id)
             raise http_error(404, error_msg)
         return make_file_response(self._exposed_files[file_id])
+
+    def add_recurrent_task(self, task: RecurrentTask) -> None:
+        self.recurrent_tasks[task.task_id] = task
+
+    def cancel_recurrent_task(self, task_id: str) -> None:
+        self.recurrent_tasks[task_id].cancel()
+
+    async def start_recurrent_tasks(self) -> None:
+        for task in self.recurrent_tasks.values():
+            await task.start()

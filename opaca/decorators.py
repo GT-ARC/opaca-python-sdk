@@ -1,14 +1,17 @@
 import ast
+import datetime
 import textwrap
 import inspect
 import re
 import logging
 import types as base_types
+import uuid
+from pydantic import BaseModel
 from typing import (Optional, Callable, get_type_hints, Dict,
                     Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator)
-from pydantic import BaseModel
 
 from .models import StreamDescription, Parameter
+from .recurrent_task import RecurrentTask
 
 if TYPE_CHECKING:
     from .abstract_agent import AbstractAgent
@@ -50,6 +53,22 @@ def stream(
         return func
 
     return decorator
+
+
+def every(
+        _func: Optional[Callable] = None,
+        *,
+        interval: float | datetime.timedelta,
+        run_immediately: bool = True,
+        task_id: str | None = None,
+) -> Callable:
+    def decorator(func: Callable):
+        func._every_interval = interval
+        func._every_run_immediately = run_immediately
+        func._every_task_id = task_id
+        return func
+
+    return decorator(_func) if _func else decorator
 
 
 def register_actions(agent: 'AbstractAgent') -> None:
@@ -103,6 +122,32 @@ def register_streams(agent: 'AbstractAgent') -> None:
             mode=mode,
             callback=getattr(agent, name),
         )
+
+
+def register_recurrent(agent: 'AbstractAgent') -> None:
+    """
+    Auto-register recurrent behaviour marked with @every.
+    """
+    for name, func in inspect.getmembers(agent, predicate=inspect.ismethod):
+        if not getattr(func, '_every_interval', False):
+            continue
+
+        interval = getattr(func, '_every_interval')
+        if isinstance(interval, float):
+            interval = datetime.timedelta(seconds=interval)
+
+        run_immediately = getattr(func, '_every_run_immediately', True)
+
+        task_id = getattr(func, '_every_task_id', None)
+        if task_id is None:
+            task_id = str(uuid.uuid4())
+        
+        agent.container.add_recurrent_task(RecurrentTask(
+            task_id=task_id,
+            interval=interval,
+            run_immediately=run_immediately,
+            callback=func,
+        ))
 
 
 def extract_models(hint: Any) -> Iterator[Any]:
@@ -336,3 +381,4 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
         defaultValue=default_value,
         items=resolve_array_items(hint) if _type == "array" else None,
     )
+

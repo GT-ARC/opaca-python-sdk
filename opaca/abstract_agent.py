@@ -8,7 +8,7 @@ import logging
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
 from .utils import http_error
-from .decorators import register_actions, register_streams, update_definitions
+from .decorators import register_actions, register_streams, update_definitions, register_recurrent
 
 if TYPE_CHECKING:
     from .container import Container
@@ -38,6 +38,7 @@ class AbstractAgent:
         register_actions(self)
         register_streams(self)
         update_definitions(self)
+        register_recurrent(self)
 
     def get_action(self, name: str) -> ActionDescription:
         """
