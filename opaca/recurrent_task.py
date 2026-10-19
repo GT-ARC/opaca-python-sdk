@@ -41,24 +41,29 @@ class RecurrentTask:
             self.asyncio_task.cancel()
 
     async def sleep(self) -> None:
-        wait_time = (self.next_run - datetime.now()).total_seconds()
+        wait_time = (self.next_run - datetime.now(tz=UTC    )).total_seconds()
         if wait_time > 0:
             await asyncio.sleep(wait_time)
 
     async def exec_callback(self) -> None:
         try:
             await self.callback()
-        except Exception:
-            log.exception(f'Recurrent task {self.task_id} failed.')
+        except Exception as e:
+            log.error(f'Recurrent task {self.task_id!r} failed.', exc_info=e)
 
     def update_next_run(self) -> None:
         self.next_run += self.interval
-        now = datetime.now()
+        now = datetime.now(tz=UTC)
         if self.next_run <= now:
             remaining = (now - self.next_run) // self.interval + 1
             self.next_run += remaining * self.interval
 
 
 def start_tasks(tasks: dict[str, RecurrentTask]) -> None:
+    def log_task_exception(atask: asyncio.Task) -> None:
+        if not atask.cancelled() and atask.exception():
+            log.error(f'Recurrent task {atask.get_name()!r} failed.', exc_info=atask.exception())
+
     for task_id, task in tasks.items():
-        task.asyncio_task = asyncio.create_task(task.start())
+        task.asyncio_task = asyncio.create_task(task.start(), name=task_id)
+        task.asyncio_task.add_done_callback(log_task_exception)
