@@ -61,4 +61,4 @@ class RecurrentTask:
 
 def start_tasks(tasks: dict[str, RecurrentTask]) -> None:
     for task_id, task in tasks.items():
-        task.asyncio_task = asyncio.create_task(task.start(), name=task_id)
+        task.asyncio_task = asyncio.create_task(task.start())

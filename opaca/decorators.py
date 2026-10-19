@@ -63,10 +63,12 @@ def every(
         *,
         interval: float | datetime.timedelta,
         run_immediately: bool = True,
+        task_id: str | None = None,
 ) -> Callable:
     def decorator(func: Callable):
         func._every_interval = interval
         func._every_run_immediately = run_immediately
+        func._every_task_id = task_id
         return func
 
     return decorator(_func) if _func else decorator
@@ -144,7 +146,10 @@ def register_recurrent(agent: 'AbstractAgent') -> None:
 
         run_immediately = getattr(func, '_every_run_immediately', True)
 
-        task_id = f'{agent.agent_id}.{func.__name__}'
+        task_id = getattr(func, '_every_task_id', None)
+        if task_id is None:
+            task_id = f'{agent.agent_id}.{func.__name__}'
+
         agent.recurrent_tasks[task_id] = RecurrentTask(
             task_id = task_id,
             interval=interval,
