@@ -6,6 +6,8 @@ import re
 import logging
 import types as base_types
 import uuid
+from inspect import iscoroutinefunction
+
 from pydantic import BaseModel
 from typing import (Optional, Callable, get_type_hints, Dict,
                     Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator)
@@ -60,12 +62,10 @@ def every(
         *,
         interval: float | datetime.timedelta,
         run_immediately: bool = True,
-        task_id: str | None = None,
 ) -> Callable:
     def decorator(func: Callable):
         func._every_interval = interval
         func._every_run_immediately = run_immediately
-        func._every_task_id = task_id
         return func
 
     return decorator(_func) if _func else decorator
@@ -129,21 +129,22 @@ def register_recurrent(agent: 'AbstractAgent') -> None:
     Auto-register recurrent behaviour marked with @every.
     """
     for name, func in inspect.getmembers(agent, predicate=inspect.ismethod):
-        if not getattr(func, '_every_interval', False):
+        if not hasattr(func, '_every_interval'):
             continue
 
+        if not iscoroutinefunction(func):
+            raise ValueError('@every-annotated functions must be async.')
+
         interval = getattr(func, '_every_interval')
-        if isinstance(interval, float):
+        if isinstance(interval, (float, int)):
             interval = datetime.timedelta(seconds=interval)
+        if interval.total_seconds() <= 0:
+            raise ValueError('Recurrent task interval must be > 0')
 
         run_immediately = getattr(func, '_every_run_immediately', True)
 
-        task_id = getattr(func, '_every_task_id', None)
-        if task_id is None:
-            task_id = str(uuid.uuid4())
-        
         agent.container.add_recurrent_task(RecurrentTask(
-            task_id=task_id,
+            task_id = str(uuid.uuid4()),
             interval=interval,
             run_immediately=run_immediately,
             callback=func,

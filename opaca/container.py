@@ -1,4 +1,3 @@
-import asyncio
 import os
 import uuid
 import logging
@@ -11,7 +10,7 @@ import httpx
 from starlette.responses import FileResponse
 
 from .abstract_agent import AbstractAgent
-from .recurrent_task import RecurrentTask
+from .recurrent_task import RecurrentTask, start_tasks
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
 from .utils import http_error, make_file_response
@@ -47,9 +46,6 @@ class Container:
                 return ImageDescription.model_validate(json.load(f))
         except TypeError:
             raise http_error(500, 'Failed to load image description.')
-
-    def on_startup(self) -> None:
-        asyncio.run(self.start_recurrent_tasks())
 
     def get_agent(self, agent_id: str) -> AbstractAgent:
         """
@@ -265,6 +261,9 @@ class Container:
     def cancel_recurrent_task(self, task_id: str) -> None:
         self.recurrent_tasks[task_id].cancel()
 
-    async def start_recurrent_tasks(self) -> None:
-        for task in self.recurrent_tasks.values():
-            await task.start()
+    def start_recurrent_tasks(self) -> None:
+        start_tasks(self.recurrent_tasks)
+
+    def cancel_recurrent_tasks(self) -> None:
+        for task_id in self.recurrent_tasks:
+            self.cancel_recurrent_task(task_id)

@@ -1,9 +1,6 @@
-import inspect
 import logging
 import asyncio
-import uuid
-import traceback
-from pydantic import BaseModel
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Callable
 
@@ -11,56 +8,59 @@ from typing import Callable
 log = logging.getLogger(__name__)
 
 
-class RecurrentTask(BaseModel):
+# noinspection broad-exception
+@dataclass
+class RecurrentTask:
     task_id: str
     interval: timedelta
     run_immediately: bool
     callback: Callable
 
-    is_running: bool = False
     start_time: datetime | None = None
     next_run: datetime | None = None
+    asyncio_task: asyncio.Task | None = None
+
+    @property
+    def is_running(self):
+        if not self.asyncio_task:
+            return False
+        return not self.asyncio_task.done()
 
     async def start(self) -> None:
         self.start_time: datetime = datetime.now()
-        self.is_running = True
+        self.next_run: datetime = self.start_time + self.interval
 
         if self.run_immediately:
-            await self.run()
+            await self.exec_callback()
 
-        self.update_next_run()
         while self.is_running and self.start_time is not None and self.next_run is not None:
             await self.sleep()
-            await self.run()
+            await self.exec_callback()
             self.update_next_run()
 
-    async def cancel(self) -> None:
-        self.is_running = False
+    def cancel(self) -> None:
+        if self.asyncio_task is not None:
+            self.asyncio_task.cancel()
 
     async def sleep(self) -> None:
-        if self.start_time is None or self.next_run is None:
-            return
         wait_time = (self.next_run - datetime.now()).total_seconds()
         if wait_time > 0:
             await asyncio.sleep(wait_time)
 
-    async def run(self) -> None:
-        callback = self.callback
-        if inspect.iscoroutinefunction(callback):
-            callback = asyncio.to_thread(callback)
-
+    async def exec_callback(self) -> None:
         try:
-            asyncio.run(callback)
-        except Exception as e:
-            log.error(f'Recurrent task {self.task_id} failed: {e}')
-            log.error(f'{traceback.format_exception(e)}')
-
+            await self.callback()
+        except Exception:
+            log.exception(f'Recurrent task {self.task_id} failed.')
 
     def update_next_run(self) -> None:
-        self.next_run = _calc_next_run(self.start_time, self.interval)
+        self.next_run += self.interval
+        now = datetime.now()
+        if self.next_run <= now:
+            remaining = (now - self.next_run) // self.interval + 1
+            self.next_run += remaining * self.interval
 
 
-def _calc_next_run(start_time: datetime, interval: timedelta) -> datetime:
-    now = datetime.now()
-    completed = (now - start_time) // interval
-    return start_time + (completed + 1) * interval
+def start_tasks(tasks: dict[str, RecurrentTask]) -> None:
+    for task_id, task in tasks.items():
+        task.asyncio_task = asyncio.create_task(task.start(), name=task_id)

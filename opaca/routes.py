@@ -1,7 +1,8 @@
-from typing import List, Dict, Any, Annotated
+from typing import List, Dict, Any, Annotated, AsyncIterator
 from fastapi import FastAPI
 from fastapi.params import Header
 from starlette.responses import StreamingResponse, FileResponse
+from contextlib import asynccontextmanager
 
 from .container import Container
 from .models import Message, AgentDescription, ContainerDescription, StreamDescription, Login
@@ -13,7 +14,13 @@ def create_routes(title: str, container: Container) -> FastAPI:
     calling the respective methods of the given container instance. The application
     still has to be run with `uvicorn.run(app, ...)`.
     """
-    app = FastAPI(debug=True, title=title)
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        container.start_recurrent_tasks()
+        yield
+        container.cancel_recurrent_tasks()
+
+    app = FastAPI(debug=True, title=title, lifespan=lifespan)
 
     @app.get('/info', response_model=ContainerDescription)
     async def get_container_info() -> ContainerDescription:
