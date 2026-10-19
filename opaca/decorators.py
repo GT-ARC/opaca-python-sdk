@@ -58,7 +58,7 @@ def stream(
 
 
 def every(
-        _func: Optional[Callable] = None,
+        _func: Optional[Callable[[], None]] = None,
         *,
         interval: float | datetime.timedelta,
         run_immediately: bool = True,

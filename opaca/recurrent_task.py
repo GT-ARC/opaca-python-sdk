@@ -13,7 +13,7 @@ class RecurrentTask:
     task_id: str
     interval: timedelta
     run_immediately: bool
-    callback: Callable
+    callback: Callable[[], None]
 
     start_time: datetime | None = None
     next_run: datetime | None = None
