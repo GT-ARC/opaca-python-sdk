@@ -1,14 +1,13 @@
 import logging
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Callable
 
 
 log = logging.getLogger(__name__)
 
 
-# noinspection broad-exception
 @dataclass
 class RecurrentTask:
     task_id: str
@@ -27,13 +26,13 @@ class RecurrentTask:
         return not self.asyncio_task.done()
 
     async def start(self) -> None:
-        self.start_time: datetime = datetime.now()
+        self.start_time: datetime = datetime.now(tz=UTC)
         self.next_run: datetime = self.start_time + self.interval
 
         if self.run_immediately:
             await self.exec_callback()
 
-        while self.is_running and self.start_time is not None and self.next_run is not None:
+        while self.is_running:
             await self.sleep()
             await self.exec_callback()
             self.update_next_run()

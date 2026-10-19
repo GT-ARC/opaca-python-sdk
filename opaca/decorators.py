@@ -144,7 +144,7 @@ def register_recurrent(agent: 'AbstractAgent') -> None:
         run_immediately = getattr(func, '_every_run_immediately', True)
 
         agent.container.add_recurrent_task(RecurrentTask(
-            task_id = str(uuid.uuid4()),
+            task_id = f'{agent.agent_id}.{func.__name__}',
             interval=interval,
             run_immediately=run_immediately,
             callback=func,
