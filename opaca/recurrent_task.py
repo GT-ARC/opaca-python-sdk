@@ -2,8 +2,7 @@ import logging
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, UTC
-from typing import Callable
-
+from typing import Callable, Coroutine, Any
 
 log = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ class RecurrentTask:
     task_id: str
     interval: timedelta
     run_immediately: bool
-    callback: Callable[[], None]
+    callback: Callable[[], Coroutine[Any, Any, None]]
 
     start_time: datetime | None = None
     next_run: datetime | None = None

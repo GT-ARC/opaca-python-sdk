@@ -255,15 +255,11 @@ class Container:
             raise http_error(404, error_msg)
         return make_file_response(self._exposed_files[file_id])
 
-    def add_recurrent_task(self, task: RecurrentTask) -> None:
-        self.recurrent_tasks[task.task_id] = task
-
-    def cancel_recurrent_task(self, task_id: str) -> None:
-        self.recurrent_tasks[task_id].cancel()
-
     def start_recurrent_tasks(self) -> None:
-        start_tasks(self.recurrent_tasks)
+        for agent in self.agents.values():
+            start_tasks(agent.recurrent_tasks)
 
     def cancel_recurrent_tasks(self) -> None:
-        for task_id in self.recurrent_tasks:
-            self.cancel_recurrent_task(task_id)
+        for agent in self.agents.values():
+            for task_id in agent.recurrent_tasks:
+                agent.cancel_recurrent_task(task_id)

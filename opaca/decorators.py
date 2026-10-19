@@ -6,11 +6,12 @@ import re
 import logging
 import types as base_types
 import uuid
+from datetime import timedelta
 from inspect import iscoroutinefunction
 
 from pydantic import BaseModel
 from typing import (Optional, Callable, get_type_hints, Dict,
-                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator)
+                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator, Coroutine)
 
 from .models import StreamDescription, Parameter
 from .recurrent_task import RecurrentTask
@@ -58,7 +59,7 @@ def stream(
 
 
 def every(
-        _func: Optional[Callable[[], None]] = None,
+        _func: Optional[Callable[[], Coroutine[Any, Any, None]]] = None,
         *,
         interval: float | datetime.timedelta,
         run_immediately: bool = True,
@@ -143,12 +144,13 @@ def register_recurrent(agent: 'AbstractAgent') -> None:
 
         run_immediately = getattr(func, '_every_run_immediately', True)
 
-        agent.container.add_recurrent_task(RecurrentTask(
-            task_id = f'{agent.agent_id}.{func.__name__}',
+        task_id = f'{agent.agent_id}.{func.__name__}'
+        agent.recurrent_tasks[task_id] = RecurrentTask(
+            task_id = task_id,
             interval=interval,
             run_immediately=run_immediately,
             callback=func,
-        ))
+        )
 
 
 def extract_models(hint: Any) -> Iterator[Any]:
