@@ -280,10 +280,3 @@ class AbstractAgent:
         Cancel a recurrent task.
         """
         self.recurrent_tasks[task_id].cancel()
-
-    async def send_outbound_message(self, agent_id: str, message: Message, **kwargs) -> None:
-        """
-        Send a message to another agent on the OPACA Runtime Platform.
-        """
-        client = AsyncOpacaClient(self.container.platform_url)
-        await client.send_message(agent_id, message, **kwargs)
