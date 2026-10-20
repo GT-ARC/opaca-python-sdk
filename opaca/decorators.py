@@ -1,14 +1,20 @@
 import ast
+import datetime
 import textwrap
 import inspect
 import re
 import logging
 import types as base_types
-from typing import (Optional, Callable, get_type_hints, Dict,
-                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator)
+import uuid
+from datetime import timedelta
+from inspect import iscoroutinefunction
+
 from pydantic import BaseModel
+from typing import (Optional, Callable, get_type_hints, Dict,
+                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator, Coroutine)
 
 from .models import StreamDescription, Parameter
+from .recurrent_task import RecurrentTask
 
 if TYPE_CHECKING:
     from .abstract_agent import AbstractAgent
@@ -50,6 +56,22 @@ def stream(
         return func
 
     return decorator
+
+
+def every(
+        _func: Callable[[], Coroutine[Any, Any, None]] | None = None,
+        *,
+        interval: float | datetime.timedelta,
+        run_immediately: bool = False,
+        task_id: str | None = None,
+) -> Callable:
+    def decorator(func: Callable):
+        func._every_interval = interval
+        func._every_run_immediately = run_immediately
+        func._every_task_id = task_id
+        return func
+
+    return decorator(_func) if _func else decorator
 
 
 def register_actions(agent: 'AbstractAgent') -> None:
@@ -102,6 +124,37 @@ def register_streams(agent: 'AbstractAgent') -> None:
             description=description,
             mode=mode,
             callback=getattr(agent, name),
+        )
+
+
+def register_recurrent(agent: 'AbstractAgent') -> None:
+    """
+    Auto-register recurrent behaviour marked with @every.
+    """
+    for name, func in inspect.getmembers(agent, predicate=inspect.ismethod):
+        if not hasattr(func, '_every_interval'):
+            continue
+
+        if not iscoroutinefunction(func):
+            raise ValueError('@every-annotated functions must be async.')
+
+        interval = getattr(func, '_every_interval')
+        if isinstance(interval, (float, int)):
+            interval = datetime.timedelta(seconds=interval)
+        if interval.total_seconds() <= 0:
+            raise ValueError('Recurrent task interval must be > 0')
+
+        run_immediately = getattr(func, '_every_run_immediately', False)
+
+        task_id = getattr(func, '_every_task_id', None)
+        if task_id is None:
+            task_id = f'{agent.agent_id}.{func.__name__}'
+
+        agent.recurrent_tasks[task_id] = RecurrentTask(
+            task_id = task_id,
+            interval=interval,
+            run_immediately=run_immediately,
+            callback=func,
         )
 
 
@@ -336,3 +389,4 @@ def python_type_to_parameter(hint: Any, default: Any = inspect.Parameter.empty) 
         defaultValue=default_value,
         items=resolve_array_items(hint) if _type == "array" else None,
     )
+

@@ -1,9 +1,10 @@
+from datetime import datetime
 from time import sleep
 from typing import Dict, Callable, Any
 from fastapi import HTTPException
 from pydantic import BaseModel
 
-from opaca import AbstractAgent, action, stream
+from opaca import AbstractAgent, action, stream, every
 from opaca.models import Message, StreamDescription, Parameter, LoginMsg
 from opaca.utils import http_error
 
@@ -160,6 +161,10 @@ class SampleAgent(AbstractAgent):
         if login_token not in self.clients.keys():
             raise HTTPException(status_code=403, detail='Forbidden')
         yield b'Calling authenticated stream with login_token: ' + login_token.encode() + b'\n' + self.clients[login_token]().encode()
+
+    @every(interval=5)
+    async def recurrent_task(self) -> None:
+        print(f'{self.agent_id} executing recurrent task - current time: {datetime.now()}')
 
     def receive_message(self, message: Message):
         super().receive_message(message)

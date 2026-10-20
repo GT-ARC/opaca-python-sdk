@@ -252,3 +252,13 @@ class Container:
             self._exposed_files.pop(file_id)
             raise http_error(404, error_msg)
         return make_file_response(self._exposed_files[file_id])
+
+    def start_recurrent_tasks(self) -> None:
+        for agent in self.agents.values():
+            for task in agent.recurrent_tasks.values():
+                task.start()
+
+    def cancel_recurrent_tasks(self) -> None:
+        for agent in self.agents.values():
+            for task_id in agent.recurrent_tasks:
+                agent.cancel_recurrent_task(task_id)

@@ -7,8 +7,9 @@ import uuid
 import logging
 
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
+from .recurrent_task import RecurrentTask
 from .utils import http_error
-from .decorators import register_actions, register_streams, update_definitions
+from .decorators import register_actions, register_streams, update_definitions, register_recurrent
 
 if TYPE_CHECKING:
     from .container import Container
@@ -33,11 +34,13 @@ class AbstractAgent:
         self.actions: Dict[str, ActionDescription] = {}
         self.streams: Dict[str, StreamDescription] = {}
         self.messages: List[Message] = []
+        self.recurrent_tasks: Dict[str, RecurrentTask] = {}
 
         self.container.add_agent(self)
         register_actions(self)
         register_streams(self)
         update_definitions(self)
+        register_recurrent(self)
 
     def get_action(self, name: str) -> ActionDescription:
         """
@@ -266,3 +269,9 @@ class AbstractAgent:
         platform was able to communicate with it.
         """
         return self.container.get_file_url(file_id)
+
+    def cancel_recurrent_task(self, task_id: str) -> None:
+        """
+        Cancel a recurrent task.
+        """
+        self.recurrent_tasks[task_id].cancel()

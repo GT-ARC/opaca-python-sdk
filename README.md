@@ -18,6 +18,34 @@ For an example of how to create new agents, take a look at the files in the `exa
 - Agent actions can also be defined `async`.
 - If there are any issues with specific type hints, please open a new [issue in this repository](https://github.com/GT-ARC/opaca-python-sdk/issues), explain what type hint is causing issues, and provide a minimal example. We will try to fix the issue as soon as possible. As a workaround, you can always fall back to using the `self.add_action()` in the agent constructor to manually register an action. A reference implementation can be found in [example/src/sample.py](https://github.com/GT-ARC/opaca-python-sdk/blob/main/example/src/sample.py).
 
+### Recurrent behaviour with the `@every` decorator
+
+You can define behaviour that is executed on a fixed interval by annotating an agent's methods with the `@every` decorator. Example:
+
+```python
+from opaca import AbstractAgent, every
+from datetime import timedelta
+
+
+class TestAgent(AbstractAgent):
+    
+    @every(interval=60)
+    async def every_60_seconds(self) -> None:
+        print(f'This function is executed every 60 seconds.')
+
+    @every(interval=timedelta(weeks=1), run_immediately=False)
+    async def every_week(self):
+        print(f'This function is executed once per week. It is not executed at container startup, the first execution is after one week.')
+```
+
+Some important notes on using this decorator:
+
+* The interval must be greater than 0.
+* The annotated function must be `async`, must not expect any parameters, and must return `None`.
+* Any blocking commands block the uvicorn event loop and the execution of other tasks, so if you want to do anything that is likely to take more time, e.g. web requests, make sure to use async libraries.
+* Each recurrent task has a task ID that consists of the agent's ID and the function name: `agent_id.func_name`. You can use that ID to cancel a task: `self.cancel_recurrent_task(task_id)`.
+
+
 ## Testing & Deployment
 
 ### Build and Deploy the Agent Container (recommended)

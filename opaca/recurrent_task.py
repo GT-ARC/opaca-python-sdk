@@ -1,0 +1,67 @@
+import logging
+import asyncio
+from dataclasses import dataclass
+from datetime import datetime, timedelta, UTC
+from typing import Callable, Coroutine, Any
+
+log = logging.getLogger(__name__)
+
+
+@dataclass
+class RecurrentTask:
+    task_id: str
+    interval: timedelta
+    run_immediately: bool
+    callback: Callable[[], Coroutine[Any, Any, None]]
+
+    next_run: datetime | None = None
+    asyncio_task: asyncio.Task | None = None
+
+    @property
+    def is_running(self):
+        if not self.asyncio_task:
+            return False
+        return not self.asyncio_task.done()
+
+    async def _run(self) -> None:
+        self.next_run: datetime = datetime.now(tz=UTC) + self.interval
+
+        if self.run_immediately:
+            await self.exec_callback()
+
+        while self.is_running:
+            await self.sleep()
+            await self.exec_callback()
+            self.update_next_run()
+
+    def start(self) -> None:
+        self.cancel()
+        self.asyncio_task: asyncio.Task = asyncio.create_task(self._run(), name=self.task_id)
+        self.asyncio_task.add_done_callback(_log_task_exception)
+
+    def cancel(self) -> None:
+        if self.asyncio_task is not None:
+            self.asyncio_task.cancel()
+
+    async def sleep(self) -> None:
+        wait_time = (self.next_run - datetime.now(tz=UTC)).total_seconds()
+        if wait_time > 0:
+            await asyncio.sleep(wait_time)
+
+    async def exec_callback(self) -> None:
+        try:
+            await self.callback()
+        except Exception as e:
+            log.error(f'Recurrent task {self.task_id!r} failed.', exc_info=e)
+
+    def update_next_run(self) -> None:
+        self.next_run += self.interval
+        now = datetime.now(tz=UTC)
+        if self.next_run <= now:
+            remaining = (now - self.next_run) // self.interval + 1
+            self.next_run += remaining * self.interval
+
+
+def _log_task_exception(atask: asyncio.Task) -> None:
+    if not atask.cancelled() and atask.exception():
+        log.error(f'Recurrent task {atask.get_name()!r} failed.', exc_info=atask.exception())

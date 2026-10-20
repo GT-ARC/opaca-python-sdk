@@ -1,6 +1,6 @@
 from fastapi import FastAPI as _FastAPI
 
-from .decorators import action, stream
+from .decorators import action, stream, every
 from .routes import create_routes
 from .container import Container
 from .abstract_agent import AbstractAgent
