@@ -9,6 +9,7 @@ import json
 import httpx
 from starlette.responses import FileResponse
 
+from . import AsyncOpacaClient
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
@@ -31,8 +32,9 @@ class Container:
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
         self.models: Dict[str, Any] = {}
-
         self._exposed_files: Dict[str, Path] = {}
+
+        self.platform_client: AsyncOpacaClient = AsyncOpacaClient(self.platform_url)
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:

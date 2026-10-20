@@ -43,6 +43,10 @@ class AbstractAgent:
         update_definitions(self)
         register_recurrent(self)
 
+    @property
+    def platform_client(self) -> AsyncOpacaClient:
+        return self.container.platform_client
+
     def get_action(self, name: str) -> ActionDescription:
         """
         Get data for the action with the specified name.
@@ -283,23 +287,3 @@ class AbstractAgent:
         """
         client = AsyncOpacaClient(self.container.platform_url)
         await client.send_message(agent_id, message, **kwargs)
-
-    async def send_outbound_broadcast(self, channel: str, message: Message, **kwargs) -> None:
-        """
-        Broadcast a message to other agents on the OPACA Runtime Platform.
-        """
-        client = AsyncOpacaClient(self.container.platform_url)
-        await client.broadcast(channel, message, **kwargs)
-
-    async def send_outbound_invoke(
-            self,
-            action: str,
-            agent_id: str | None = None,
-            args: dict[str, Any] | None = None,
-            **kwargs
-    ) -> None:
-        """
-        Invoke an action on another agent on the OPACA Runtime Platform.
-        """
-        client = AsyncOpacaClient(self.container.platform_url)
-        await client.invoke(action, agent_id, args, **kwargs)
