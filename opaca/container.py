@@ -10,7 +10,6 @@ import httpx
 from starlette.responses import FileResponse
 
 from .abstract_agent import AbstractAgent
-from .recurrent_task import RecurrentTask, start_tasks
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
 from .utils import http_error, make_file_response
@@ -256,7 +255,8 @@ class Container:
 
     def start_recurrent_tasks(self) -> None:
         for agent in self.agents.values():
-            start_tasks(agent.recurrent_tasks)
+            for task in agent.recurrent_tasks.values():
+                task.start()
 
     def cancel_recurrent_tasks(self) -> None:
         for agent in self.agents.values():
