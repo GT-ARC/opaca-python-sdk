@@ -6,6 +6,7 @@ from pydantic import ValidationError
 import uuid
 import logging
 
+from . import AsyncOpacaClient
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
 from .recurrent_task import RecurrentTask
 from .utils import http_error
@@ -275,3 +276,30 @@ class AbstractAgent:
         Cancel a recurrent task.
         """
         self.recurrent_tasks[task_id].cancel()
+
+    async def send_outbound_message(self, agent_id: str, message: Message, **kwargs) -> None:
+        """
+        Send a message to another agent on the OPACA Runtime Platform.
+        """
+        client = AsyncOpacaClient(self.container.platform_url)
+        await client.send_message(agent_id, message, **kwargs)
+
+    async def send_outbound_broadcast(self, channel: str, message: Message, **kwargs) -> None:
+        """
+        Broadcast a message to other agents on the OPACA Runtime Platform.
+        """
+        client = AsyncOpacaClient(self.container.platform_url)
+        await client.broadcast(channel, message, **kwargs)
+
+    async def send_outbound_invoke(
+            self,
+            action: str,
+            agent_id: str | None = None,
+            args: dict[str, Any] | None = None,
+            **kwargs
+    ) -> None:
+        """
+        Invoke an action on another agent on the OPACA Runtime Platform.
+        """
+        client = AsyncOpacaClient(self.container.platform_url)
+        await client.invoke(action, agent_id, args, **kwargs)
