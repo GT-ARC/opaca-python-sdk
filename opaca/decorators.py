@@ -59,10 +59,10 @@ def stream(
 
 
 def every(
-        _func: Optional[Callable[[], Coroutine[Any, Any, None]]] = None,
+        _func: Callable[[], Coroutine[Any, Any, None]] | None = None,
         *,
         interval: float | datetime.timedelta,
-        run_immediately: bool = True,
+        run_immediately: bool = False,
         task_id: str | None = None,
 ) -> Callable:
     def decorator(func: Callable):
@@ -144,7 +144,7 @@ def register_recurrent(agent: 'AbstractAgent') -> None:
         if interval.total_seconds() <= 0:
             raise ValueError('Recurrent task interval must be > 0')
 
-        run_immediately = getattr(func, '_every_run_immediately', True)
+        run_immediately = getattr(func, '_every_run_immediately', False)
 
         task_id = getattr(func, '_every_task_id', None)
         if task_id is None:

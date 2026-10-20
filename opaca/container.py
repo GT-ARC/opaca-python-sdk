@@ -32,7 +32,6 @@ class Container:
         self.started_at: datetime = datetime.now(timezone.utc)
         self.channels: Dict[str, List[AbstractAgent]] = {}
         self.models: Dict[str, Any] = {}
-        self.recurrent_tasks: Dict[str, RecurrentTask] = {}
 
         self._exposed_files: Dict[str, Path] = {}
 

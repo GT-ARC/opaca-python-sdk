@@ -20,7 +20,7 @@ For an example of how to create new agents, take a look at the files in the `exa
 
 ### Recurrent behaviour with the `@every` decorator
 
-You can define behaviour that is executed on a fixed interval by annotating an agent's functions with `@every`. Example:
+You can define behaviour that is executed on a fixed interval by annotating an agent's methods with the `@every` decorator. Example:
 
 ```python
 from opaca import AbstractAgent, every

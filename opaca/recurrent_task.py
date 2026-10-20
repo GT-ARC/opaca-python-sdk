@@ -14,7 +14,6 @@ class RecurrentTask:
     run_immediately: bool
     callback: Callable[[], Coroutine[Any, Any, None]]
 
-    start_time: datetime | None = None
     next_run: datetime | None = None
     asyncio_task: asyncio.Task | None = None
 
@@ -25,8 +24,7 @@ class RecurrentTask:
         return not self.asyncio_task.done()
 
     async def start(self) -> None:
-        self.start_time: datetime = datetime.now(tz=UTC)
-        self.next_run: datetime = self.start_time + self.interval
+        self.next_run: datetime = datetime.now(tz=UTC) + self.interval
 
         if self.run_immediately:
             await self.exec_callback()
@@ -41,7 +39,7 @@ class RecurrentTask:
             self.asyncio_task.cancel()
 
     async def sleep(self) -> None:
-        wait_time = (self.next_run - datetime.now(tz=UTC    )).total_seconds()
+        wait_time = (self.next_run - datetime.now(tz=UTC)).total_seconds()
         if wait_time > 0:
             await asyncio.sleep(wait_time)
 
