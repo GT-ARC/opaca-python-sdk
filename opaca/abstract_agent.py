@@ -9,7 +9,7 @@ import logging
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
 from .recurrent_task import RecurrentTask
 from .utils import http_error
-from .decorators import register_actions, register_streams, update_definitions, register_recurrent
+from .decorators import _register_actions, _register_streams, _update_definitions, _register_recurrent
 
 if TYPE_CHECKING:
     from .container import Container
@@ -35,12 +35,12 @@ class AbstractAgent:
         self.streams: Dict[str, StreamDescription] = {}
         self.messages: List[Message] = []
         self.recurrent_tasks: Dict[str, RecurrentTask] = {}
-
         self.container.add_agent(self)
-        register_actions(self)
-        register_streams(self)
-        update_definitions(self)
-        register_recurrent(self)
+
+        _register_actions(self)
+        _register_streams(self)
+        _update_definitions(self)
+        _register_recurrent(self)
 
     def get_action(self, name: str) -> ActionDescription:
         """
@@ -97,7 +97,7 @@ class AbstractAgent:
             action = self.get_action(name)
             callback = action.callback
 
-            parameters = self.parse_custom_types(name, parameters)
+            parameters = self._parse_custom_types(name, parameters)
 
             if getattr(callback, '_auth', False):
                 if not login_token:
@@ -147,6 +147,13 @@ class AbstractAgent:
                 callback=callback,
             )
 
+    def remove_stream(self, name: str) -> None:
+        """
+        Removes a stream from this agent's stream list.
+        """
+        if self.knows_stream(name):
+            del self.streams[name]
+
     def invoke_stream(
             self,
             name: str,
@@ -168,16 +175,10 @@ class AbstractAgent:
         else:
             raise http_error(400, f'Unknown mode: {mode}')
 
-    def remove_stream(self, name: str) -> None:
-        """
-        Removes a stream from this agent's stream list.
-        """
-        if self.knows_stream(name):
-            del self.streams[name]
-
     def receive_message(self, message: Message) -> None:
         """
-        Override in subclasses to do something with the message.
+        This is called when the agent receives a message via the POST /send route.
+        Implement this method in your agent to do something with the message.
         """
         self.messages.append(message)
 
@@ -209,7 +210,7 @@ class AbstractAgent:
         """
         pass
 
-    def make_description(self) -> AgentDescription:
+    def make_model(self) -> AgentDescription:
         return AgentDescription(
             agentId=self.agent_id,
             agentType=self.agent_type,
@@ -218,11 +219,11 @@ class AbstractAgent:
             streams=[stream for stream in self.streams.values()],
         )
 
-    def parse_custom_types(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
+    def _parse_custom_types(self, action: str, parameters: dict[str, Any]) -> dict[str, Any]:
         """
         Parse any parameters that are defined as custom types into the corresponding model class.
         """
-        models = self.container.models
+        models = self.container._base_models
 
         def parse_model(value: Any, param: Parameter | Parameter.ArrayItems) -> Any:
             if param.type == 'array':
