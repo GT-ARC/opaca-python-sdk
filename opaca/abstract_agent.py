@@ -6,6 +6,7 @@ from pydantic import ValidationError
 import uuid
 import logging
 
+from . import AsyncOpacaClient
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
 from .recurrent_task import RecurrentTask
 from .utils import http_error
@@ -41,6 +42,10 @@ class AbstractAgent:
         register_streams(self)
         update_definitions(self)
         register_recurrent(self)
+
+    @property
+    def platform_client(self) -> AsyncOpacaClient:
+        return self.container.platform_client
 
     def get_action(self, name: str) -> ActionDescription:
         """
