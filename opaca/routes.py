@@ -1,10 +1,11 @@
 from typing import List, Dict, Any, Annotated, AsyncIterator
 from fastapi import FastAPI
-from fastapi.params import Header
+from fastapi.params import Header, Depends
 from starlette.responses import StreamingResponse, FileResponse
 from contextlib import asynccontextmanager
 
 from .container import Container
+from .keycloak_utils import create_token_dependency
 from .models import Message, AgentDescription, ContainerDescription, StreamDescription, Login
 
 
@@ -20,7 +21,14 @@ def create_routes(title: str, container: Container) -> FastAPI:
         yield
         container.cancel_recurrent_tasks()
 
-    app = FastAPI(debug=True, title=title, lifespan=lifespan)
+    check_header_token = create_token_dependency(container.keycloak_client)
+
+    app = FastAPI(
+        debug=True,
+        title=title,
+        lifespan=lifespan,
+        dependencies=[Depends(check_header_token)]
+    )
 
     @app.get('/info', response_model=ContainerDescription)
     async def get_container_info() -> ContainerDescription:

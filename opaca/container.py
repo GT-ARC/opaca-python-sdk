@@ -11,6 +11,7 @@ from starlette.responses import FileResponse
 
 from .client import AsyncOpacaClient
 from .abstract_agent import AbstractAgent
+from .keycloak_utils import KeycloakClient
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
 from .utils import http_error, make_file_response
@@ -25,9 +26,11 @@ class Container:
         self.container_id: str = os.getenv('CONTAINER_ID', '')
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.owner: str = os.getenv('OWNER', '')
-        self.token: str = os.getenv('TOKEN', '')
+        self.keycloak_url = os.getenv('KEYCLOAK_URL', '')
+        self.client_secret = os.getenv('CLIENT_SECRET', '')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.platform_client: AsyncOpacaClient = AsyncOpacaClient(self.platform_url)
+        self.keycloak_client = KeycloakClient(self.keycloak_url, self.client_secret, self.container_id)
 
         self._own_url: Optional[str] = None
         self._agents: Dict[str, AbstractAgent] = {}
