@@ -9,7 +9,7 @@ import json
 import httpx
 from starlette.responses import FileResponse
 
-from . import AsyncOpacaClient
+from .client import AsyncOpacaClient
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 import uuid
 import logging
 
-from . import AsyncOpacaClient
+from .client import AsyncOpacaClient
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
 from .recurrent_task import RecurrentTask
 from .utils import http_error

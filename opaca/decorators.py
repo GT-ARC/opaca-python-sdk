@@ -5,8 +5,6 @@ import inspect
 import re
 import logging
 import types as base_types
-import uuid
-from datetime import timedelta
 from inspect import iscoroutinefunction
 
 from pydantic import BaseModel
