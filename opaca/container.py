@@ -9,6 +9,7 @@ import json
 import httpx
 from starlette.responses import FileResponse
 
+from . import AsyncOpacaClient
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
@@ -26,6 +27,7 @@ class Container:
         self.owner: str = os.getenv('OWNER', '')
         self.token: str = os.getenv('TOKEN', '')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
+        self.platform_client: AsyncOpacaClient = AsyncOpacaClient(self.platform_url)
 
         self._own_url: Optional[str] = None
         self._agents: Dict[str, AbstractAgent] = {}
