@@ -27,7 +27,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Get a description of the container.
         """
-        return container.get_description()
+        return container.make_model()
 
 
     @app.get('/agents', response_model=List[AgentDescription])
@@ -35,7 +35,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Get a list of all agents and their corresponding actions.
         """
-        return container.get_agent_descriptions()
+        return container._make_agent_models()
 
 
     @app.get('/agents/{agentId}', response_model=AgentDescription)
@@ -43,7 +43,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Returns the agent with the passed agentId.
         """
-        return container.get_agent(agentId).make_description()
+        return container.get_agent(agentId).make_model()
 
 
     @app.post('/send/{agentId}')
