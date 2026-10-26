@@ -1,8 +1,8 @@
 import logging
 from typing import Tuple, Any, Dict, Annotated, Callable
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from keycloak import KeycloakOpenID, KeycloakConnectionError, KeycloakGetError
+from keycloak import KeycloakOpenID
 
 log = logging.getLogger(__name__)
 
@@ -28,21 +28,11 @@ class KeycloakClient:
         client: KeycloakOpenID = KeycloakOpenID(
             server_url=url,
             realm_name=realm,
-            client_id=f'container-{container_id}',
-            client_secret_key=client_secret
+            client_id=f'container-{self.container_id}',
+            client_secret_key=self.client_secret
         )
         self._openid = client
         return client
-
-
-    def validate_token(self, token: str) -> bool:
-        if not self.keycloak_url:
-            return True
-        try:
-            self.get_token_claims(token)
-            return True
-        except ValueError:
-            return False
 
     def get_token_claims(self, token: str) -> Dict[str, Any]:
         try:
