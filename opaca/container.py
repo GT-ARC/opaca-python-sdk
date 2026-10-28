@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import json
 import httpx
+from pydantic import BaseModel
 from starlette.responses import FileResponse
 
 from .client import AsyncOpacaClient
@@ -264,3 +265,11 @@ class Container:
         for agent in self._agents.values():
             for task_id in agent.recurrent_tasks:
                 agent.cancel_recurrent_task(task_id)
+
+    def register_base_model(self, model: type[BaseModel]) -> None:
+        """
+        Register a base model class in this container. This means that
+        the model's JSON schema is added to the 'definitions' in the
+        container's info.
+        """
+        self._base_models[model.__name__] = model
