@@ -6,7 +6,7 @@ from keycloak import KeycloakOpenID
 
 log = logging.getLogger(__name__)
 
-bearer_scheme = HTTPBearer(auto_error=False)
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 class KeycloakClient:
@@ -48,8 +48,7 @@ def create_token_dependency(client: KeycloakClient) -> Callable[[Any], Any]:
     """
     Create a FastAPI dependency to check the keycloak Bearer token, if present.
     """
-
-    def check_header_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)]) -> Dict[str, Any]:
+    def check_header_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]) -> Dict[str, Any]:
         error_headers = {'WWW-Authenticate': 'Bearer'}
         if not client or not client.keycloak_url:
             return {}
@@ -63,6 +62,7 @@ def create_token_dependency(client: KeycloakClient) -> Callable[[Any], Any]:
             raise HTTPException(status_code=401, detail='Failed to validate token', headers=error_headers) from e
 
     return check_header_token
+
 
 def _split_keycloak_url_and_realm(url_and_realm: str) -> Tuple[str, str]:
     try:
