@@ -117,7 +117,7 @@ def _register_actions(agent: 'AbstractAgent') -> None:
         description = _parse_description(func)
 
         if getattr(func, '_auth', False):
-            check_for_token(action_name, params)
+            _check_for_token(action_name, params)
 
         log.debug(f'REGISTER ACTION: {agent.agent_id} {name} {action_name} {description}, {params}, {return_type}')
 
@@ -143,7 +143,7 @@ def _register_streams(agent: 'AbstractAgent') -> None:
         description = _parse_description(func)
 
         if getattr(func, '_auth', False):
-            check_for_token(stream_name, params)
+            _check_for_token(stream_name, params)
 
         mode = getattr(func, '_mode', StreamDescription.Mode.GET)
 
@@ -217,14 +217,14 @@ def _update_definitions(agent: 'AbstractAgent') -> None:
         try:
             if cls.__name__ not in definitions:
                 definitions[cls.__name__] = make_schema(cls)
-                agent.container._base_models[cls.__name__] = cls
+                agent.container.register_base_model(cls)
         except Exception as e:
             log.error(f'Failed to add custom type {cls} to container definitions: {e}')
 
 
-def check_for_token(name: str, params: Dict[str, Parameter]) -> None:
-    if not any(name == "login_token" or getattr(p, "name", None) == "login_token"
-               for name, p in list(params.items())):
+def _check_for_token(name: str, params: Dict[str, Parameter]) -> None:
+    if not any(name == "login_token" or getattr(param, "name", None) == "login_token"
+               for name, param in list(params.items())):
         raise TypeError(f'The method {name} was declared with "auth" and therefore needs to define '
                         f'the parameter "login_token".')
     if params["login_token"].type != "string":
