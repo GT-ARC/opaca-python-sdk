@@ -30,7 +30,8 @@ class Container:
         self.client_secret = os.getenv('CLIENT_SECRET', '')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.platform_client: AsyncOpacaClient = AsyncOpacaClient(self.platform_url)
-        self.keycloak_client = KeycloakClient(self.keycloak_url, self.client_secret, self.container_id)
+        self.keycloak_client: KeycloakClient | None = KeycloakClient(self.keycloak_url, self.client_secret, self.container_id) \
+                if self.keycloak_url else None
 
         self._own_url: Optional[str] = None
         self._agents: Dict[str, AbstractAgent] = {}

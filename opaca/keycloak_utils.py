@@ -1,8 +1,11 @@
 import logging
 from typing import Tuple, Any, Dict, Annotated, Callable
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
+
+from opaca.utils import http_error
+
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +47,7 @@ class KeycloakClient:
         return claims
 
 
-def create_token_dependency(client: KeycloakClient) -> Callable[[Any], Any]:
+def create_token_dependency(client: KeycloakClient | None) -> Callable[[Any], Any]:
     """
     Create a FastAPI dependency to check the keycloak Bearer token, if present.
     """
@@ -54,13 +57,13 @@ def create_token_dependency(client: KeycloakClient) -> Callable[[Any], Any]:
         if not client or not client.keycloak_url:
             return {}
         if credentials is None:
-            raise HTTPException(status_code=401, detail='Missing Bearer token', headers=error_headers)
+            raise http_error(401, cause='Missing Bearer token', headers=error_headers)
 
         try:
             token = credentials.credentials
             return client.get_token_claims(token)
         except Exception as e:
-            raise HTTPException(status_code=401, detail='Failed to validate token', headers=error_headers) from e
+            raise http_error(401, cause='Failed to validate token', headers=error_headers) from e
 
     return check_header_token
 
