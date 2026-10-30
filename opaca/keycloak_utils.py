@@ -3,6 +3,7 @@ from typing import Tuple, Any, Dict, Annotated, Callable
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
+from jwcrypto.jwk import JWKSet, JWK
 
 from opaca.utils import http_error
 
@@ -18,33 +19,59 @@ class KeycloakClient:
         self.keycloak_url = keycloak_url
         self.client_secret = client_secret
         self.container_id = container_id
+
         self._openid: KeycloakOpenID | None = None
+        self._jwk_cache: JWKSet | None = None
 
     def _get_openid(self) -> KeycloakOpenID:
         if self._openid is not None:
             return self._openid
 
         if not self.keycloak_url:
-            raise ValueError(f'Keycloak URL is not valid: {self.keycloak_url}')
+            raise ValueError(f'Keycloak URL is not set: {self.keycloak_url}')
 
         url, realm = _split_keycloak_url_and_realm(self.keycloak_url)
         client: KeycloakOpenID = KeycloakOpenID(
             server_url=url,
             realm_name=realm,
-            client_id=f'container-{self.container_id}',
+            client_id=self.container_id,
             client_secret_key=self.client_secret
         )
         self._openid = client
         return client
 
+    def _update_jwk_cache(self) -> None:
+        if self._jwk_cache is not None: return
+        keys = JWKSet()
+        for cert in self._get_openid().certs()['keys']:
+            jwk = JWK(**cert)
+            keys.add(jwk)
+        self._jwk_cache = keys
+
     def get_token_claims(self, token: str) -> Dict[str, Any]:
+        """
+        Decode the token and return the claims.
+
+        leeway=10: Token expiry time can be exceeded by up to 10 seconds to account for clock inaccuracies.
+        check_claims={'exp': None}: Token must have an expiry claim.
+        """
         try:
-            claims = self._get_openid().decode_token(token, algs=['RS256'], leeway=0)
+            self._update_jwk_cache()
+            claims = self._get_openid().decode_token(token, key=self._jwk_cache,
+                 algs=['RS256'], leeway=10, check_claims={'exp': None})
         except Exception as e:
-            raise ValueError('Failed to get token claims') from e
-        if 'exp' not in claims:
-            raise ValueError('Token has no expiration time')
+            raise ValueError('Failed to validate token') from e
         return claims
+
+    def get_client_token(self) -> str:
+        """
+        Get an access token for an OPACA client.
+        """
+        try:
+            token_data = self._get_openid().token(grant_type='client_credentials')
+            return token_data['access_token']
+        except Exception as e:
+            raise ValueError('Failed to get access token for client') from e
 
 
 def create_token_dependency(client: KeycloakClient | None) -> Callable[[Any], Any]:

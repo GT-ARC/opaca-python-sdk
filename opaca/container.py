@@ -31,8 +31,7 @@ class Container:
         self.client_secret = os.getenv('CLIENT_SECRET', '')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.platform_client: AsyncOpacaClient = AsyncOpacaClient(self.platform_url)
-        self.keycloak_client: KeycloakClient | None = KeycloakClient(self.keycloak_url, self.client_secret, self.container_id) \
-                if self.keycloak_url else None
+        self.keycloak_client: KeycloakClient | None = self._init_keycloak_client()
 
         self._own_url: Optional[str] = None
         self._agents: Dict[str, AbstractAgent] = {}
@@ -40,6 +39,16 @@ class Container:
         self._broadcast_channels: Dict[str, List[AbstractAgent]] = {}
         self._base_models: Dict[str, Any] = {}
         self._exposed_files: Dict[str, Path] = {}
+
+    def _init_keycloak_client(self) -> KeycloakClient | None:
+        if not self.keycloak_url: return None
+        try:
+            client = KeycloakClient(self.keycloak_url, self.client_secret, self.container_id)
+            self.platform_client.token = client.get_client_token()
+            return client
+        except Exception as e:
+            log.error(f'Failed to initialize keycloak client.', exc_info=e)
+            return None
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -222,8 +231,12 @@ class Container:
             return f'http://localhost:{self.image.apiPort}'
 
         if self._own_url is None:
+            headers = {'Authorization': f'Bearer {self.platform_client.token}'} \
+                if self.platform_client.token else None
             try:
-                containers = httpx.get(f"{self.platform_url}/containers").json()
+                result = httpx.get(f"{self.platform_url}/containers", headers=headers)
+                result.raise_for_status()
+                containers = result.json()
                 connectivity = next(c["connectivity"] for c in containers if c["containerId"] == self.container_id)
                 self._own_url = f'{connectivity["publicUrl"]}:{connectivity["apiPortMapping"]}'
             except httpx.RequestError as e:
