@@ -4,7 +4,7 @@ from typing import Any, AsyncIterator
 from httpx import QueryParams
 
 from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
-    Message, Event, StreamContent
+    Message, Event, StreamContent, TokenPair, TokenRenew
 
 
 class Timeout(enum.Enum):
@@ -24,7 +24,8 @@ class AsyncOpacaClient:
         :param timeout: The default timeout for requests.
         """
         self.url: str | None = url
-        self.token: str | None = None
+        self.access_token: str | None = None
+        self.refresh_token: str | None = None
         self.container_tokens: dict[str, str] = {}
         self.timeout: TimeoutType = None if timeout is Timeout.NOT_SET else timeout
 
@@ -40,21 +41,26 @@ class AsyncOpacaClient:
         Acquire a login token from the platform. The token is also cached within
         the client itself and automatically added to all request headers.
         """
-        self.token = None
+        self.access_token = None
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._request('POST', '/login', body=body, timeout=timeout)
-        token = response.text
-        self.token = token
-        return token
+        tokens = TokenPair.model_validate_json(response.json())
+        self.access_token = tokens.accessToken
+        self.refresh_token = tokens.refreshToken
+        return tokens.accessToken
 
     async def renew_token(self, timeout: TimeoutType = Timeout.NOT_SET) -> str:
         """
         Update the cached platform login token.
         """
-        response = await self._request('GET', '/token', timeout=timeout)
-        token = response.text
-        self.token = token
-        return token
+        if self.refresh_token is None:
+            raise ValueError(f'Cannot renew access token: refreshToken is missing. Call platform_login first.')
+        renew = TokenRenew(refreshToken=self.refresh_token)
+        response = await self._request('POST', '/login/renew', body=renew, timeout=timeout)
+        tokens = TokenPair.model_validate_json(response.json())
+        self.access_token = tokens.accessToken
+        self.refresh_token = tokens.refreshToken
+        return tokens.accessToken
 
     async def container_login(
             self,
@@ -325,8 +331,8 @@ class AsyncOpacaClient:
 
     def _headers(self) -> dict[str, str] | None:
         headers = {'Content-Type': 'application/json; charset=UTF-8'}
-        if self.token:
-            headers['Authorization'] = f'Bearer {self.token}'
+        if self.access_token:
+            headers['Authorization'] = f'Bearer {self.access_token}'
         return headers
 
 def _build_query_params(**kwargs) -> QueryParams | None:
