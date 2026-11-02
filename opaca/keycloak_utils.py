@@ -70,7 +70,9 @@ class KeycloakClient:
         """
         try:
             data = self._get_openid().token(grant_type='client_credentials')
-            return TokenPair.model_validate(data)
+            access_token = data['access_token']
+            refresh_token = data['refresh_token']
+            return TokenPair(accessToken=access_token, refreshToken=refresh_token)
         except Exception as e:
             raise ValueError('Failed to get access token for client') from e
 

@@ -44,7 +44,7 @@ class AsyncOpacaClient:
         self.access_token = None
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._request('POST', '/login', body=body, timeout=timeout)
-        tokens = TokenPair.model_validate_json(response.json())
+        tokens = TokenPair.model_validate(response.json())
         self.access_token = tokens.accessToken
         self.refresh_token = tokens.refreshToken
         return tokens.accessToken
@@ -55,9 +55,9 @@ class AsyncOpacaClient:
         """
         if self.refresh_token is None:
             raise ValueError(f'Cannot renew access token: refreshToken is missing. Call platform_login first.')
-        body = TokenRenew(refreshToken=self.refresh_token)
+        body = TokenRenew(refreshToken=self.refresh_token).model_dump(mode='json')
         response = await self._request('POST', '/login/renew', body=body, timeout=timeout)
-        tokens = TokenPair.model_validate_json(response.json())
+        tokens = TokenPair.model_validate(response.json())
         self.access_token = tokens.accessToken
         self.refresh_token = tokens.refreshToken
         return tokens.accessToken
