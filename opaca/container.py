@@ -44,13 +44,11 @@ class Container:
         if not self.keycloak_url: return None
         try:
             client = KeycloakClient(self.keycloak_url, self.client_secret, self.container_id)
-            tokens = client.get_client_token()
-            self.platform_client.access_token = tokens.accessToken
-            self.platform_client.refresh_token = tokens.refreshToken
+            self.platform_client.access_token = client.get_client_token()
             return client
         except Exception as e:
-            log.error(f'Failed to initialize keycloak client.', exc_info=e)
-            return None
+            log.error('Failed to initialize keycloak client.')
+            raise e
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:

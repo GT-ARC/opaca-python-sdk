@@ -5,7 +5,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
 from jwcrypto.jwk import JWKSet, JWK
 
-from opaca.models import TokenPair
 from opaca.utils import http_error
 
 
@@ -64,15 +63,13 @@ class KeycloakClient:
             raise ValueError('Failed to validate token') from e
         return claims
 
-    def get_client_token(self) -> TokenPair:
+    def get_client_token(self) -> str:
         """
         Get an access token for an OPACA client.
         """
         try:
             data = self._get_openid().token(grant_type='client_credentials')
-            access_token = data['access_token']
-            refresh_token = data['refresh_token']
-            return TokenPair(accessToken=access_token, refreshToken=refresh_token)
+            return data['access_token']
         except Exception as e:
             raise ValueError('Failed to get access token for client') from e
 

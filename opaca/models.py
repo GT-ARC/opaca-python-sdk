@@ -116,7 +116,7 @@ class LoginMsg(BaseModel):
 
 class TokenPair(BaseModel):
     accessToken: str
-    refreshToken: str
+    refreshToken: str | None = None
 
 
 class TokenRenew(BaseModel):
