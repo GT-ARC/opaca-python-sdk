@@ -44,7 +44,9 @@ class Container:
         if not self.keycloak_url: return None
         try:
             client = KeycloakClient(self.keycloak_url, self.client_secret, self.container_id)
-            self.platform_client.token = client.get_client_token()
+            tokens = client.get_client_token()
+            self.platform_client.access_token = tokens.accessToken
+            self.platform_client.refresh_token = tokens.refreshToken
             return client
         except Exception as e:
             log.error(f'Failed to initialize keycloak client.', exc_info=e)
@@ -231,15 +233,15 @@ class Container:
             return f'http://localhost:{self.image.apiPort}'
 
         if self._own_url is None:
-            headers = {'Authorization': f'Bearer {self.platform_client.token}'} \
-                if self.platform_client.token else None
+            headers = {'Authorization': f'Bearer {self.platform_client.access_token}'} \
+                if self.platform_client.access_token else None
             try:
                 result = httpx.get(f"{self.platform_url}/containers", headers=headers)
                 result.raise_for_status()
                 containers = result.json()
                 connectivity = next(c["connectivity"] for c in containers if c["containerId"] == self.container_id)
                 self._own_url = f'{connectivity["publicUrl"]}:{connectivity["apiPortMapping"]}'
-            except httpx.RequestError as e:
+            except Exception as e:
                 log.error('Failed to request own URL from the OPACA runtime platform. '
                           'Make sure that the container is known by the platform.')
                 raise e
