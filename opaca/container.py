@@ -1,7 +1,8 @@
+import asyncio
 import os
 import uuid
 import logging
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -27,11 +28,9 @@ class Container:
         self.container_id: str = os.getenv('CONTAINER_ID', '')
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.owner: str = os.getenv('OWNER', '')
-        self.keycloak_url = os.getenv('KEYCLOAK_URL', '')
-        self.client_secret = os.getenv('CLIENT_SECRET', '')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
         self.platform_client: AsyncOpacaClient = AsyncOpacaClient(self.platform_url)
-        self.keycloak_client: KeycloakClient | None = self._init_keycloak_client()
+        self.auth_helper = _ContainerAuth(self)
 
         self._own_url: Optional[str] = None
         self._agents: Dict[str, AbstractAgent] = {}
@@ -39,16 +38,6 @@ class Container:
         self._broadcast_channels: Dict[str, List[AbstractAgent]] = {}
         self._base_models: Dict[str, Any] = {}
         self._exposed_files: Dict[str, Path] = {}
-
-    def _init_keycloak_client(self) -> KeycloakClient | None:
-        if not self.keycloak_url: return None
-        try:
-            client = KeycloakClient(self.keycloak_url, self.client_secret, self.container_id)
-            self.platform_client.access_token = client.get_client_token()
-            return client
-        except Exception as e:
-            log.error('Failed to initialize keycloak client.')
-            raise e
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -290,3 +279,39 @@ class Container:
         container's info.
         """
         self._base_models[model.__name__] = model
+
+
+class _ContainerAuth:
+
+    def __init__(self, container: Container) -> None:
+        self.container: Container = container
+        self.keycloak_url = os.getenv('KEYCLOAK_URL', '')
+        self.client_secret = os.getenv('CLIENT_SECRET', '')
+
+        self.keycloak_client: KeycloakClient | None = self.init_keycloak_client()
+        self.platform_id: str | None = None
+
+        self._platform_id_last_fetch: datetime = datetime.min.replace(tzinfo=UTC)
+        self._platform_id_lock: asyncio.Lock = asyncio.Lock()
+
+    def init_keycloak_client(self) -> KeycloakClient | None:
+        if not self.keycloak_url: return None
+        try:
+            client = KeycloakClient(self.keycloak_url, self.client_secret, self.container.container_id)
+            self.container.platform_client.access_token = client.get_client_token()
+            return client
+        except Exception as e:
+            log.error('Failed to initialize keycloak client.')
+            raise e
+
+    async def check_client_id(self, client_id: str) -> bool:
+        async with self._platform_id_lock:
+            now = datetime.now(tz=UTC)
+            if client_id != self.platform_id and self._platform_id_last_fetch < (now - timedelta(seconds=60)):
+                self._platform_id_last_fetch = now
+                try:
+                    self.platform_id = (await self.container.platform_client.get_info()).platformId
+                except Exception as e:
+                    log.error('Failed to fetch platformId.', exc_info=e)
+                    return False
+            return client_id == self.platform_id

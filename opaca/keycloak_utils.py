@@ -1,11 +1,14 @@
 import logging
-from typing import Tuple, Any, Dict, Annotated, Callable
+from typing import Tuple, Any, Dict, Annotated, Callable, TYPE_CHECKING
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
 from jwcrypto.jwk import JWKSet, JWK
 
 from opaca.utils import http_error
+
+if TYPE_CHECKING:
+    from opaca import Container
 
 
 log = logging.getLogger(__name__)
@@ -74,11 +77,14 @@ class KeycloakClient:
             raise ValueError('Failed to get access token for client') from e
 
 
-def create_token_dependency(client: KeycloakClient | None) -> Callable[[Any], Any]:
+def create_token_dependency(container: 'Container') -> Callable[[Any], Any]:
     """
     Create a FastAPI dependency to check the keycloak Bearer token, if present.
     """
-    def check_header_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]) -> Dict[str, Any]:
+    auth = container.auth_helper
+    client = auth.keycloak_client
+
+    async def check_header_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]) -> Dict[str, Any]:
         error_headers = {'WWW-Authenticate': 'Bearer'}
         if not client or not client.keycloak_url:
             return {}
@@ -87,9 +93,15 @@ def create_token_dependency(client: KeycloakClient | None) -> Callable[[Any], An
 
         try:
             token = credentials.credentials
-            return client.get_token_claims(token)
+            claims = client.get_token_claims(token)
         except Exception as e:
             raise http_error(401, cause='Failed to validate token', headers=error_headers) from e
+
+        client_id = claims.get('client_id') or claims.get('azp')
+        if not client_id or not await auth.check_client_id(client_id):
+            raise http_error(401, cause='Failed to validate client_id', headers=error_headers)
+
+        return claims
 
     return check_header_token
 

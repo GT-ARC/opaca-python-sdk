@@ -54,7 +54,7 @@ def _create_protected_routes(container: Container) -> APIRouter:
     """
     If auth is enabled, these routes require a valid Bearer token.
     """
-    check_token = create_token_dependency(container.keycloak_client)
+    check_token = create_token_dependency(container)
     router = APIRouter(dependencies=[Depends(check_token)])
 
     @router.get('/info', response_model=ContainerDescription)
