@@ -51,7 +51,7 @@ class KeycloakClient:
             keys.add(jwk)
         self._jwk_cache = keys
 
-    def get_token_claims(self, token: str) -> Dict[str, Any]:
+    async def get_token_claims(self, token: str) -> Dict[str, Any]:
         """
         Decode the token and return the claims.
 
@@ -60,18 +60,18 @@ class KeycloakClient:
         """
         try:
             self._update_jwk_cache()
-            claims = self._get_openid().decode_token(token, key=self._jwk_cache,
+            claims = await self._get_openid().a_decode_token(token, key=self._jwk_cache,
                  algs=['RS256'], leeway=10, check_claims={'exp': None})
         except Exception as e:
             raise ValueError('Failed to validate token') from e
         return claims
 
-    def get_client_token(self) -> str:
+    async def get_client_token(self) -> str:
         """
         Get an access token for an OPACA client.
         """
         try:
-            data = self._get_openid().token(grant_type='client_credentials')
+            data = await self._get_openid().a_token(grant_type='client_credentials')
             return data['access_token']
         except Exception as e:
             raise ValueError('Failed to get access token for client') from e
@@ -92,7 +92,7 @@ def create_token_dependency(container: 'Container') -> Callable[[Any], Any]:
 
         try:
             token = credentials.credentials
-            claims = keycloak_client.get_token_claims(token)
+            claims = await keycloak_client.get_token_claims(token)
         except Exception as e:
             raise http_error(401, cause='Failed to validate token', headers=error_headers) from e
 

@@ -317,6 +317,8 @@ class AsyncOpacaClient:
         timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
         async with httpx.AsyncClient() as client:
             response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
+            if response.status_code == 401:
+                self.access_token = self._token_provider()
             response.raise_for_status()
             return response
 
