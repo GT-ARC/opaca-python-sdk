@@ -1,8 +1,9 @@
 import httpx
 import enum
-from typing import Any, AsyncIterator, Callable
+from typing import Any, AsyncIterator, Callable, Awaitable
 from httpx import QueryParams
 
+from .keycloak_utils import KeycloakToken
 from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
     Message, Event, StreamContent, TokenPair, TokenRenew
 
@@ -18,7 +19,7 @@ class AsyncOpacaClient:
     def __init__(
             self,
             platform_url: str | None = None,
-            token_provider: Callable[[], str] | None = None,
+            token_provider: Callable[[], Awaitable[KeycloakToken]] | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> None:
         """
@@ -30,8 +31,8 @@ class AsyncOpacaClient:
         :param timeout: The default timeout for requests.
         """
         self.url: str | None = platform_url
-        self.access_token: str | None = None
-        self.refresh_token: str | None = None
+        self.access_token: KeycloakToken | None = None
+        self.refresh_token: KeycloakToken | None = None
         self.container_tokens: dict[str, str] = {}
         self.timeout: TimeoutType = None if timeout is Timeout.NOT_SET else timeout
 
@@ -53,8 +54,8 @@ class AsyncOpacaClient:
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._request('POST', '/login', body=body, timeout=timeout)
         tokens = TokenPair.model_validate(response.json())
-        self.access_token = tokens.accessToken
-        self.refresh_token = tokens.refreshToken
+        self.access_token = KeycloakToken(token=tokens.accessToken)
+        self.refresh_token = KeycloakToken(token=tokens.refreshToken) if tokens.refreshToken else None
         return tokens.accessToken
 
     async def renew_token(self, timeout: TimeoutType = Timeout.NOT_SET) -> str:
@@ -318,7 +319,7 @@ class AsyncOpacaClient:
         async with httpx.AsyncClient() as client:
             response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
             if response.status_code == 401:
-                self.access_token = self._token_provider()
+                self.access_token = await self._token_provider()
             response.raise_for_status()
             return response
 

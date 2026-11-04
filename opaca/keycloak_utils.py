@@ -1,11 +1,13 @@
+import asyncio
 import logging
-from typing import Tuple, Any, Dict, Annotated, Callable, TYPE_CHECKING
+from typing import Tuple, Any, Dict, Annotated, Callable, TYPE_CHECKING, Awaitable
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
 from jwcrypto.jwk import JWKSet, JWK
+from datetime import datetime, UTC, timedelta
 
-from opaca.utils import http_error
+from .utils import http_error
 
 if TYPE_CHECKING:
     from opaca import Container
@@ -14,6 +16,20 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=False)
+
+class KeycloakToken:
+
+    def __init__(self, token: str, expires_at: datetime | None = None) -> None:
+        self.token: str
+        self.expires_at: datetime | None = None
+        self._lock: asyncio.Lock = asyncio.Lock()
+
+    def __aenter__(self) -> 'KeycloakToken':
+        self._lock.acquire()
+        return self
+
+    def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        self._lock.release()
 
 
 class KeycloakClient:
@@ -66,18 +82,21 @@ class KeycloakClient:
             raise ValueError('Failed to validate token') from e
         return claims
 
-    async def get_client_token(self) -> str:
+    async def get_client_token(self) -> KeycloakToken:
         """
         Get an access token for an OPACA client.
         """
         try:
             data = await self._get_openid().a_token(grant_type='client_credentials')
-            return data['access_token']
+            return KeycloakToken(
+                token=data['access_token'],
+                expires_at=datetime.now(tz=UTC) + timedelta(seconds=data['expires_in'])
+            )
         except Exception as e:
             raise ValueError('Failed to get access token for client') from e
 
 
-def create_token_dependency(container: 'Container') -> Callable[[Any], Any]:
+def create_token_dependency(container: 'Container') -> Callable[[Any], Awaitable[Any]]:
     """
     Create a FastAPI dependency to check the keycloak Bearer token, if present.
     """
