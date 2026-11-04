@@ -18,10 +18,10 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 
 class KeycloakClient:
 
-    def __init__(self, keycloak_url: str, client_secret: str, container_id: str) -> None:
+    def __init__(self, keycloak_url: str, client_secret: str, client_id: str) -> None:
         self.keycloak_url = keycloak_url
         self.client_secret = client_secret
-        self.container_id = container_id
+        self.client_id = client_id
 
         self._openid: KeycloakOpenID | None = None
         self._jwk_cache: JWKSet | None = None
@@ -37,7 +37,7 @@ class KeycloakClient:
         client: KeycloakOpenID = KeycloakOpenID(
             server_url=url,
             realm_name=realm,
-            client_id=self.container_id,
+            client_id=self.client_id,
             client_secret_key=self.client_secret
         )
         self._openid = client
@@ -81,24 +81,24 @@ def create_token_dependency(container: 'Container') -> Callable[[Any], Any]:
     """
     Create a FastAPI dependency to check the keycloak Bearer token, if present.
     """
-    auth = container.auth_helper
-    client = auth.keycloak_client
+    platform_client = container.platform_client
+    keycloak_client = platform_client.keycloak_client
 
     async def check_header_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]) -> Dict[str, Any]:
         error_headers = {'WWW-Authenticate': 'Bearer'}
-        if not client or not client.keycloak_url:
+        if not keycloak_client or not keycloak_client.keycloak_url:
             return {}
         if credentials is None:
             raise http_error(401, cause='Missing Bearer token', headers=error_headers)
 
         try:
             token = credentials.credentials
-            claims = client.get_token_claims(token)
+            claims = keycloak_client.get_token_claims(token)
         except Exception as e:
             raise http_error(401, cause='Failed to validate token', headers=error_headers) from e
 
         client_id = claims.get('client_id') or claims.get('azp')
-        if not client_id or not await auth.check_client_id(client_id):
+        if not isinstance(client_id, str) or not await container.check_client_id(client_id):
             raise http_error(401, cause='Failed to validate client_id', headers=error_headers)
 
         return claims

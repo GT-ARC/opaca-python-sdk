@@ -13,7 +13,6 @@ from starlette.responses import FileResponse
 
 from .client import AsyncOpacaClient
 from .abstract_agent import AbstractAgent
-from .keycloak_utils import KeycloakClient
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
 from .utils import http_error, make_file_response
@@ -29,8 +28,7 @@ class Container:
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.owner: str = os.getenv('OWNER', '')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
-        self.platform_client: AsyncOpacaClient = AsyncOpacaClient(self.platform_url)
-        self.auth_helper = _ContainerAuth(self)
+        self.platform_client: AsyncOpacaClient = self._init_platform_client()
 
         self._own_url: Optional[str] = None
         self._agents: Dict[str, AbstractAgent] = {}
@@ -38,6 +36,21 @@ class Container:
         self._broadcast_channels: Dict[str, List[AbstractAgent]] = {}
         self._base_models: Dict[str, Any] = {}
         self._exposed_files: Dict[str, Path] = {}
+        self._platform_id: str | None = None
+        self._platform_id_last_fetch: datetime = datetime.min.replace(tzinfo=UTC)
+        self._platform_id_lock: asyncio.Lock = asyncio.Lock()
+
+
+    def _init_platform_client(self) -> AsyncOpacaClient:
+        client = AsyncOpacaClient(
+            platform_url=self.platform_url,
+            keycloak_url=os.getenv('KEYCLOAK_URL'),
+            client_secret=os.getenv('CLIENT_SECRET'),
+            client_id=self.container_id,
+        )
+        if client.keycloak_client:
+            client.access_token = client.keycloak_client.get_client_token()
+        return client
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -280,38 +293,17 @@ class Container:
         """
         self._base_models[model.__name__] = model
 
-
-class _ContainerAuth:
-
-    def __init__(self, container: Container) -> None:
-        self.container: Container = container
-        self.keycloak_url = os.getenv('KEYCLOAK_URL', '')
-        self.client_secret = os.getenv('CLIENT_SECRET', '')
-
-        self.keycloak_client: KeycloakClient | None = self.init_keycloak_client()
-        self.platform_id: str | None = None
-
-        self._platform_id_last_fetch: datetime = datetime.min.replace(tzinfo=UTC)
-        self._platform_id_lock: asyncio.Lock = asyncio.Lock()
-
-    def init_keycloak_client(self) -> KeycloakClient | None:
-        if not self.keycloak_url: return None
-        try:
-            client = KeycloakClient(self.keycloak_url, self.client_secret, self.container.container_id)
-            self.container.platform_client.access_token = client.get_client_token()
-            return client
-        except Exception as e:
-            log.error('Failed to initialize keycloak client.')
-            raise e
-
     async def check_client_id(self, client_id: str) -> bool:
+        """
+        Check whether the given client_id matches the platform's platformId.
+        """
         async with self._platform_id_lock:
-            now = datetime.now(tz=UTC)
-            if client_id != self.platform_id and self._platform_id_last_fetch < (now - timedelta(seconds=60)):
-                self._platform_id_last_fetch = now
+            needs_update = self._platform_id_last_fetch < (datetime.now(tz=UTC) - timedelta(seconds=60))
+            if client_id != self._platform_id and needs_update:
                 try:
-                    self.platform_id = (await self.container.platform_client.get_info()).platformId
+                    self._platform_id_last_fetch = datetime.now(tz=UTC)
+                    self._platform_id = (await self.platform_client.get_info()).platformId
                 except Exception as e:
                     log.error('Failed to fetch platformId.', exc_info=e)
                     return False
-            return client_id == self.platform_id
+            return client_id == self._platform_id
