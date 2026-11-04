@@ -191,13 +191,13 @@ class Container:
             containerId=self.container_id,
             image=self.image,
             arguments=self._make_container_params(False),
-            agents=self._make_agent_models(),
+            agents=self.make_agent_models(),
             owner=self.owner,
             runningSince=self._make_running_since(),
             connectivity=None
         )
 
-    def _make_agent_models(self) -> List[AgentDescription]:
+    def make_agent_models(self) -> List[AgentDescription]:
         return [agent.make_model() for agent in self._agents.values()]
 
     def _make_running_since(self) -> str:

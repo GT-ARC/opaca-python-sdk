@@ -329,6 +329,7 @@ class AsyncOpacaClient:
             headers['Authorization'] = f'Bearer {self.token}'
         return headers
 
+
 def _build_query_params(**kwargs) -> QueryParams | None:
     filtered_params = {
         param: value
@@ -340,5 +341,5 @@ def _build_query_params(**kwargs) -> QueryParams | None:
     return QueryParams(**filtered_params)
 
 
-class UrlNotSetException(RuntimeError):
+class UrlNotSetException(ValueError):
     pass

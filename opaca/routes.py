@@ -35,7 +35,7 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Get a list of all agents and their corresponding actions.
         """
-        return container._make_agent_models()
+        return container.make_agent_models()
 
 
     @app.get('/agents/{agentId}', response_model=AgentDescription)
