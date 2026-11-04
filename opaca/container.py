@@ -11,6 +11,7 @@ import httpx
 from pydantic import BaseModel
 from starlette.responses import FileResponse
 
+from .keycloak_utils import KeycloakClient
 from .client import AsyncOpacaClient
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
@@ -28,6 +29,7 @@ class Container:
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.owner: str = os.getenv('OWNER', '')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
+        self.keycloak_client: KeycloakClient | None = self._init_keycloak_client()
         self.platform_client: AsyncOpacaClient = self._init_platform_client()
 
         self._own_url: Optional[str] = None
@@ -40,17 +42,25 @@ class Container:
         self._platform_id_last_fetch: datetime = datetime.min.replace(tzinfo=UTC)
         self._platform_id_lock: asyncio.Lock = asyncio.Lock()
 
-
-    def _init_platform_client(self) -> AsyncOpacaClient:
-        client = AsyncOpacaClient(
-            platform_url=self.platform_url,
-            keycloak_url=os.getenv('KEYCLOAK_URL'),
-            client_secret=os.getenv('CLIENT_SECRET'),
+    def _init_keycloak_client(self) -> KeycloakClient | None:
+        keycloak_url = os.getenv('KEYCLOAK_URL', '')
+        client_secret = os.getenv('CLIENT_SECRET', '')
+        if not keycloak_url: return None
+        if not client_secret:
+            raise ValueError('Keycloak CLIENT_SECRET is missing.')
+        return KeycloakClient(
+            keycloak_url=keycloak_url,
+            client_secret=client_secret,
             client_id=self.container_id,
         )
-        if client.keycloak_client:
-            client.access_token = client.keycloak_client.get_client_token()
-        return client
+
+    def _init_platform_client(self) -> AsyncOpacaClient:
+        token_provider = self.keycloak_client.get_client_token \
+            if self.keycloak_client else None
+        return AsyncOpacaClient(
+            platform_url=self.platform_url,
+            token_provider=token_provider,
+        )
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:

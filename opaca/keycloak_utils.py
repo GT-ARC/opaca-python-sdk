@@ -81,8 +81,7 @@ def create_token_dependency(container: 'Container') -> Callable[[Any], Any]:
     """
     Create a FastAPI dependency to check the keycloak Bearer token, if present.
     """
-    platform_client = container.platform_client
-    keycloak_client = platform_client.keycloak_client
+    keycloak_client = container.keycloak_client
 
     async def check_header_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer_scheme)]) -> Dict[str, Any]:
         error_headers = {'WWW-Authenticate': 'Bearer'}

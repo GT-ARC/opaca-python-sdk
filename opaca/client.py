@@ -1,9 +1,8 @@
 import httpx
 import enum
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Callable
 from httpx import QueryParams
 
-from .keycloak_utils import KeycloakClient
 from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
     Message, Event, StreamContent, TokenPair, TokenRenew
 
@@ -19,21 +18,15 @@ class AsyncOpacaClient:
     def __init__(
             self,
             platform_url: str | None = None,
-            keycloak_url: str | None = None,
-            client_secret: str | None = None,
-            client_id: str | None = None,
+            token_provider: Callable[[], str] | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> None:
         """
         A client for asynchronous interaction with an OPACA Runtime Platform.
 
-        All the keycloak settings can simply be left as None if the
-        platform does not require authentication.
-
         :param platform_url: The URL of the OPACA Runtime Platform.
-        :param keycloak_url: The URL of the keycloak server, with realm.
-        :param client_secret: The secret used for getting tokens from keycloak.
-        :param client_id: The client ID uesd for identification at the keycloak server.
+        :param token_provider: A function that generates a new keycloak access token.
+        Leave as None for platforms without authentication.
         :param timeout: The default timeout for requests.
         """
         self.url: str | None = platform_url
@@ -41,8 +34,8 @@ class AsyncOpacaClient:
         self.refresh_token: str | None = None
         self.container_tokens: dict[str, str] = {}
         self.timeout: TimeoutType = None if timeout is Timeout.NOT_SET else timeout
-        self.keycloak_client: KeycloakClient | None \
-            = _init_keycloak_client(keycloak_url, client_secret, client_id)
+
+        self._token_provider = token_provider
 
     ### AUTHENTICATION ###
 
@@ -349,17 +342,6 @@ class AsyncOpacaClient:
         if self.access_token:
             headers['Authorization'] = f'Bearer {self.access_token}'
         return headers
-
-
-def _init_keycloak_client(
-        keycloak_url: str | None,
-        client_secret: str | None,
-        client_id: str | None,
-) -> KeycloakClient | None:
-    if not keycloak_url: return None
-    if not client_secret or not client_id:
-        raise ValueError('When using keycloak, you must specify all of keycloak_url, client_secret and client_id.')
-    return KeycloakClient(keycloak_url, client_secret, client_id)
 
 
 def _build_query_params(**kwargs) -> QueryParams | None:
