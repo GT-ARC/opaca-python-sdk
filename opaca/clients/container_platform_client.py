@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 class ContainerPlatformClient(AsyncOpacaClient):
     """
     This client is intended to be used by containers to contact their parent platform.
-    For the general async-client to contact OPACA platforms, see clients/async_opaca_client,py
+    For the general async-client to contact OPACA platforms, see the AsyncOpacaClient class.
     """
 
     def __init__(

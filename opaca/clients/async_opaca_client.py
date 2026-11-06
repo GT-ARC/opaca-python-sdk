@@ -25,7 +25,6 @@ class AsyncOpacaClient:
         A client for asynchronous interaction with an OPACA Runtime Platform.
 
         :param platform_url: The URL of the OPACA Runtime Platform.
-        Leave as None for platforms without authentication.
         :param timeout: The default timeout for requests.
         """
         self.url: str | None = platform_url
