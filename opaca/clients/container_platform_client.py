@@ -51,6 +51,7 @@ class ContainerPlatformClient(AsyncOpacaClient):
         async with self._token_lock:
             if self._token_provider is None: return
             if not force and not self._is_access_token_expiring(): return
+            log.info('Renewing container access token...')
             try:
                 self.access_token = await self._token_provider()
             except Exception as e:

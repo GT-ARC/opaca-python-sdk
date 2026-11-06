@@ -113,6 +113,11 @@ class SampleAgent(AbstractAgent):
         except FileNotFoundError:
             raise http_error(404, f'File not found: resources/{file_name}')
 
+    @action
+    async def broadcast_message(self, channel: str = 'test', message: str = 'message') -> None:
+        """Send a broadcast to the parent platform."""
+        await self.platform_client.broadcast(channel, Message(payload=message))
+
     # Streams
 
     async def sample_stream(self):
