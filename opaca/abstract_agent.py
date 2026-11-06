@@ -101,6 +101,7 @@ class AbstractAgent:
         try:
             action = self.get_action(name)
             callback = action.callback
+            if not callback: return None
 
             parameters = self._parse_custom_types(name, parameters)
 
@@ -171,10 +172,14 @@ class AbstractAgent:
         if not self.knows_stream(name):
             raise http_error(400, f'Unknown stream: {name}.')
 
+        stream = self.get_stream(name)
+        callback = stream.callback
+        if not callback: return None
+
         if mode == StreamDescription.Mode.GET:
-            if getattr(self.get_stream(name).callback, '_auth', False):
-                return self.get_stream(name).callback(login_token)
-            return self.get_stream(name).callback()
+            if getattr(callback, '_auth', False):
+                return callback(login_token)
+            return callback()
         elif mode == StreamDescription.Mode.POST:
             raise http_error(500, f'Functionality for POSTing streams not yet implemented.')
         else:
@@ -259,7 +264,7 @@ class AbstractAgent:
         Expose a file to be publicly available
         via the '/files/{file_id}' route.
 
-        Call `self.get_file_url(file_id)` to get the full URL where
+        Call `await self.get_file_url(file_id)` to get the full URL where
         the file is available.
 
         :param path: The path to the file.
@@ -267,14 +272,14 @@ class AbstractAgent:
         """
         return self.container.expose_file(path)
 
-    def get_file_url(self, file_id: str) -> str:
+    async def get_file_url(self, file_id: str) -> str:
         """
         Get the full URL for an exposed file.
 
         This is only usable AFTER the container is online and the
         platform was able to communicate with it.
         """
-        return self.container.get_file_url(file_id)
+        return await self.container.get_file_url(file_id)
 
     def cancel_recurrent_task(self, task_id: str) -> None:
         """

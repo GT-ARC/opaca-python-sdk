@@ -7,7 +7,6 @@ from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import json
-import httpx
 from pydantic import BaseModel
 from starlette.responses import FileResponse
 
@@ -234,28 +233,32 @@ class Container:
                  for param in self.image.parameters
                  if include_confidential or not param.confidential }
 
-    def find_own_url(self):
+    async def find_own_url(self) -> str:
         """
         Find the container's own base url, including the API port.
-
-        Should replace this with SyncOpacaClient call once that exists.
         """
+        # special case for test containers without parent platform.
         if not self.platform_url:
             return f'http://localhost:{self.image.apiPort}'
 
         if self._own_url is None:
-            headers = {'Authorization': f'Bearer {self.platform_client.access_token.token}'} \
-                if self.platform_client.access_token else None
             try:
-                result = httpx.get(f"{self.platform_url}/containers", headers=headers)
-                result.raise_for_status()
-                containers = result.json()
-                connectivity = next(c["connectivity"] for c in containers if c["containerId"] == self.container_id)
-                self._own_url = f'{connectivity["publicUrl"]}:{connectivity["apiPortMapping"]}'
+                containers = await self.platform_client.get_containers()
             except Exception as e:
-                log.error('Failed to request own URL from the OPACA runtime platform. '
-                          'Make sure that the container is known by the platform.')
+                log.error('Failed to request own URL from the OPACA runtime platform.')
                 raise e
+
+            connectivity = next(
+                (c.connectivity for c in containers
+                if c.containerId == self.container_id and c.connectivity is not None),
+                None
+            )
+            if not connectivity:
+                raise ValueError('Container is not in the platform\'s container list. '
+                                 'Make sure that the container is known by the platform.')
+            url = f'{connectivity.publicUrl}:{connectivity.apiPortMapping}'
+            self._own_url = url
+            return url
 
         return self._own_url
 
@@ -269,9 +272,9 @@ class Container:
         self._exposed_files[file_id] = file_path
         return file_id
 
-    def get_file_url(self, file_id: str) -> str:
+    async def get_file_url(self, file_id: str) -> str:
         """Helper function to get an exposed file's full URL."""
-        own_url = self.find_own_url()
+        own_url = await self.find_own_url()
         if not own_url:
             raise http_error(400,f'Could not find own URL.')
         return f'{own_url}/files/{file_id}'

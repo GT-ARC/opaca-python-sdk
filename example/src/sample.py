@@ -98,7 +98,7 @@ class SampleAgent(AbstractAgent):
         }
 
     @action
-    def expose_resource_file(self, file_name: str) -> str:
+    async def expose_resource_file(self, file_name: str) -> str:
         """
         Expose a file from the resources/ directory via the
         /files/{file_id} route using the expose_file function.
@@ -109,7 +109,7 @@ class SampleAgent(AbstractAgent):
         """
         try:
             file_id = self.expose_file(f'resources/{file_name}')
-            return self.get_file_url(file_id)
+            return await self.get_file_url(file_id)
         except FileNotFoundError:
             raise http_error(404, f'File not found: resources/{file_name}')
 
