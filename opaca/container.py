@@ -13,6 +13,7 @@ from starlette.responses import FileResponse
 
 from .keycloak_utils import KeycloakClient
 from .clients import AsyncOpacaClient
+from .clients.container_platform_client import ContainerPlatformClient
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
@@ -57,7 +58,7 @@ class Container:
     def _init_platform_client(self) -> AsyncOpacaClient:
         token_provider = self.keycloak_client.get_client_token \
             if self.keycloak_client else None
-        return AsyncOpacaClient(
+        return ContainerPlatformClient(
             platform_url=self.platform_url,
             token_provider=token_provider,
         )
@@ -243,7 +244,7 @@ class Container:
             return f'http://localhost:{self.image.apiPort}'
 
         if self._own_url is None:
-            headers = {'Authorization': f'Bearer {self.platform_client.access_token}'} \
+            headers = {'Authorization': f'Bearer {self.platform_client.access_token.token}'} \
                 if self.platform_client.access_token else None
             try:
                 result = httpx.get(f"{self.platform_url}/containers", headers=headers)

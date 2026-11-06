@@ -3,8 +3,8 @@ import enum
 from typing import Any, AsyncIterator, Callable, Awaitable
 from httpx import QueryParams
 
-from .keycloak_utils import KeycloakToken
-from .models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
+from ..keycloak_utils import KeycloakToken
+from ..models import ContainerDescription, PlatformInfo, PostContainer, Login, AgentDescription, ConnectionRequest, \
     Message, Event, StreamContent, TokenPair, TokenRenew
 
 class Timeout(enum.Enum):
@@ -25,7 +25,6 @@ class AsyncOpacaClient:
         A client for asynchronous interaction with an OPACA Runtime Platform.
 
         :param platform_url: The URL of the OPACA Runtime Platform.
-        :param token_provider: A function that generates a new keycloak access token.
         Leave as None for platforms without authentication.
         :param timeout: The default timeout for requests.
         """
@@ -61,11 +60,11 @@ class AsyncOpacaClient:
         """
         if self.refresh_token is None:
             raise ValueError(f'Cannot renew access token: refreshToken is missing. Call platform_login first.')
-        body = TokenRenew(refreshToken=self.refresh_token).model_dump(mode='json')
+        body = TokenRenew(refreshToken=self.refresh_token.token).model_dump(mode='json')
         response = await self._request('POST', '/login/renew', body=body, timeout=timeout)
         tokens = TokenPair.model_validate(response.json())
-        self.access_token = tokens.accessToken
-        self.refresh_token = tokens.refreshToken
+        self.access_token = KeycloakToken(token=tokens.accessToken)
+        self.refresh_token = KeycloakToken(token=tokens.refreshToken) if tokens.refreshToken else None
         return tokens.accessToken
 
     async def container_login(
@@ -338,7 +337,7 @@ class AsyncOpacaClient:
     def _headers(self) -> dict[str, str] | None:
         headers = {'Content-Type': 'application/json; charset=UTF-8'}
         if self.access_token:
-            headers['Authorization'] = f'Bearer {self.access_token}'
+            headers['Authorization'] = f'Bearer {self.access_token.token}'
         return headers
 
 

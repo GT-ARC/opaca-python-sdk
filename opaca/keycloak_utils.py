@@ -7,6 +7,8 @@ from keycloak import KeycloakOpenID
 from jwcrypto.jwk import JWKSet, JWK
 from datetime import datetime, UTC, timedelta
 
+from pydantic import BaseModel
+
 from .utils import http_error
 
 if TYPE_CHECKING:
@@ -17,19 +19,9 @@ log = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
-class KeycloakToken:
-
-    def __init__(self, token: str, expires_at: datetime | None = None) -> None:
-        self.token: str
-        self.expires_at: datetime | None = None
-        self._lock: asyncio.Lock = asyncio.Lock()
-
-    def __aenter__(self) -> 'KeycloakToken':
-        self._lock.acquire()
-        return self
-
-    def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        self._lock.release()
+class KeycloakToken(BaseModel):
+    token: str
+    expires_at: datetime | None = None
 
 
 class KeycloakClient:
