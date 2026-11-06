@@ -19,7 +19,6 @@ class AsyncOpacaClient:
     def __init__(
             self,
             platform_url: str | None = None,
-            token_provider: Callable[[], Awaitable[KeycloakToken]] | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> None:
         """
@@ -35,8 +34,6 @@ class AsyncOpacaClient:
         self.refresh_token: KeycloakToken | None = None
         self.container_tokens: dict[str, str] = {}
         self.timeout: TimeoutType = None if timeout is Timeout.NOT_SET else timeout
-
-        self._token_provider = token_provider
 
     ### AUTHENTICATION ###
 
@@ -318,8 +315,6 @@ class AsyncOpacaClient:
         timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
         async with httpx.AsyncClient() as client:
             response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
-            if response.status_code == 401:
-                self.access_token = await self._token_provider()
             response.raise_for_status()
             return response
 

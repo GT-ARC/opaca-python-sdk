@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from starlette.responses import FileResponse
 
 from .keycloak_utils import KeycloakClient
-from .client import AsyncOpacaClient
+from .clients import AsyncOpacaClient
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
