@@ -241,26 +241,25 @@ class Container:
         if not self.platform_url:
             return f'http://localhost:{self.image.apiPort}'
 
-        if self._own_url is None:
-            try:
-                containers = await self.platform_client.get_containers()
-            except Exception as e:
-                log.error('Failed to request own URL from the OPACA runtime platform.')
-                raise e
+        if self._own_url:
+            return self._own_url
+        try:
+            containers = await self.platform_client.get_containers()
+        except Exception as e:
+            log.error('Failed to request own URL from the OPACA runtime platform.')
+            raise e
+        connectivity = next(
+            (c.connectivity for c in containers
+            if c.containerId == self.container_id and c.connectivity is not None),
+            None
+        )
+        if not connectivity:
+            raise ValueError('Container is not in the platform\'s container list. '
+                             'Make sure that the container is known by the platform.')
 
-            connectivity = next(
-                (c.connectivity for c in containers
-                if c.containerId == self.container_id and c.connectivity is not None),
-                None
-            )
-            if not connectivity:
-                raise ValueError('Container is not in the platform\'s container list. '
-                                 'Make sure that the container is known by the platform.')
-            url = f'{connectivity.publicUrl}:{connectivity.apiPortMapping}'
-            self._own_url = url
-            return url
-
-        return self._own_url
+        own_url = f'{connectivity.publicUrl}:{connectivity.apiPortMapping}'
+        self._own_url = own_url
+        return own_url
 
     def expose_file(self, path: str | Path) -> str:
         """Helper function to publicly expose a file
