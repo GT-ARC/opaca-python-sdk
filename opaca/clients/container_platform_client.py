@@ -1,7 +1,5 @@
 import asyncio
 import logging
-from datetime import datetime, UTC, timedelta
-
 import httpx
 from typing import Awaitable, Callable, Any, AsyncIterator
 from httpx import QueryParams
@@ -50,18 +48,12 @@ class ContainerPlatformClient(AsyncOpacaClient):
         """
         async with self._token_lock:
             if self._token_provider is None: return
-            if not force and not self._is_access_token_expiring(): return
+            if not force and not self.access_token.is_expired(): return
             log.info('Renewing container access token...')
             try:
                 self.access_token = await self._token_provider()
             except Exception as e:
                 log.error(f'Failed to renew access token', exc_info=e)
-
-    def _is_access_token_expiring(self) -> bool:
-        if not self.access_token or not self.access_token.expires_at:
-            return True
-        # 30 secs before expiration
-        return (datetime.now(tz=UTC) + timedelta(seconds=30)) > self.access_token.expires_at
 
     async def _request(
             self,
@@ -75,7 +67,7 @@ class ContainerPlatformClient(AsyncOpacaClient):
         Check whether the access token is expired/close to expiring before sending the request,
         and also retry once in case of a 401.
         """
-        if self._is_access_token_expiring():
+        if self.access_token.is_expired():
             await self._renew_token()
         try:
             return await super()._request(method, path, body, params, timeout)
@@ -96,7 +88,7 @@ class ContainerPlatformClient(AsyncOpacaClient):
         Check whether the access token is expired/close to expiring before sending the request.
         No retry here, as the body-iterator might already be exhausted.
         """
-        if self._is_access_token_expiring():
+        if self.access_token.is_expired():
             await self._renew_token()
         async for chunk in super()._stream(method, path, content, params, timeout):
             yield chunk

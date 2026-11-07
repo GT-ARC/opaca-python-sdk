@@ -1,10 +1,11 @@
-import asyncio
 import logging
+import json
 from typing import Tuple, Any, Dict, Annotated, Callable, TYPE_CHECKING, Awaitable
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from keycloak import KeycloakOpenID
 from jwcrypto.jwk import JWKSet, JWK
+from jwcrypto.common import base64url_decode
 from datetime import datetime, UTC, timedelta
 
 from pydantic import BaseModel
@@ -18,10 +19,30 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 _bearer_scheme = HTTPBearer(auto_error=False)
+_EXPIRATION_OFFSET: timedelta = timedelta(seconds=30)
 
 class KeycloakToken(BaseModel):
-    token: str
+    token: str = ''
     expires_at: datetime | None = None
+
+    @classmethod
+    def from_jwt(cls, token: str) -> 'KeycloakToken':
+        try:
+            _, payload, _ = token.split('.')
+            claims = json.loads(base64url_decode(payload))
+            expires_at = datetime.fromtimestamp(claims['exp'], tz=UTC) if 'exp' in claims else None
+            return cls(token=token, expires_at=expires_at)
+        except Exception as e:
+            log.warning(f'Failed to decode JWT: {e}')
+            return cls(token=token)
+
+    def is_expired(self) -> bool:
+        if not self.expires_at: return True
+        return (datetime.now(tz=UTC) + _EXPIRATION_OFFSET) > self.expires_at
+
+    def clear(self) -> None:
+        self.token = ''
+        self.expires_at = None
 
 
 class KeycloakClient:
