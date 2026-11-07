@@ -101,6 +101,7 @@ class AbstractAgent:
         try:
             action = self.get_action(name)
             callback = action.callback
+            if not callback: return None
 
             parameters = self._parse_custom_types(name, parameters)
 
@@ -171,10 +172,14 @@ class AbstractAgent:
         if not self.knows_stream(name):
             raise http_error(400, f'Unknown stream: {name}.')
 
+        stream = self.get_stream(name)
+        callback = stream.callback
+        if not callback: return None
+
         if mode == StreamDescription.Mode.GET:
-            if getattr(self.get_stream(name).callback, '_auth', False):
-                return self.get_stream(name).callback(login_token)
-            return self.get_stream(name).callback()
+            if getattr(callback, '_auth', False):
+                return callback(login_token)
+            return callback()
         elif mode == StreamDescription.Mode.POST:
             raise http_error(500, f'Functionality for POSTing streams not yet implemented.')
         else:
