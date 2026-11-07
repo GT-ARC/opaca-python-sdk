@@ -55,7 +55,7 @@ class KeycloakClient:
         self._openid: KeycloakOpenID | None = None
         self._jwk_cache: JWKSet | None = None
 
-    def _get_openid(self) -> KeycloakOpenID:
+    async def _get_openid(self) -> KeycloakOpenID:
         if self._openid is not None:
             return self._openid
 
@@ -72,10 +72,11 @@ class KeycloakClient:
         self._openid = client
         return client
 
-    def _update_jwk_cache(self) -> None:
+    async def _update_jwk_cache(self) -> None:
         if self._jwk_cache is not None: return
         keys = JWKSet()
-        for cert in self._get_openid().certs()['keys']:
+        openid = await self._get_openid()
+        for cert in (await openid.a_certs())['keys']:
             jwk = JWK(**cert)
             keys.add(jwk)
         self._jwk_cache = keys
@@ -88,8 +89,9 @@ class KeycloakClient:
         check_claims={'exp': None}: Token must have an expiry claim.
         """
         try:
-            self._update_jwk_cache()
-            claims = await self._get_openid().a_decode_token(token, key=self._jwk_cache,
+            await self._update_jwk_cache()
+            openid = await self._get_openid()
+            claims = await openid.a_decode_token(token, key=self._jwk_cache,
                  algs=['RS256'], leeway=10, check_claims={'exp': None})
         except Exception as e:
             raise ValueError('Failed to validate token') from e
@@ -100,7 +102,8 @@ class KeycloakClient:
         Get an access token for an OPACA client.
         """
         try:
-            data = await self._get_openid().a_token(grant_type='client_credentials')
+            openid = await self._get_openid()
+            data = await openid.a_token(grant_type='client_credentials')
             return KeycloakToken(
                 token=data['access_token'],
                 expires_at=datetime.now(tz=UTC) + timedelta(seconds=data['expires_in'])

@@ -60,6 +60,7 @@ class Container:
         return ContainerPlatformClient(
             platform_url=self.platform_url,
             token_provider=token_provider,
+            timeout=30,
         )
 
     @staticmethod
