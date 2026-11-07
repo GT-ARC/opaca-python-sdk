@@ -39,7 +39,7 @@ class Container:
         self._base_models: Dict[str, Any] = {}
         self._exposed_files: Dict[str, Path] = {}
         self._platform_id: str | None = None
-        self._platform_id_last_fetch: datetime = datetime.min.replace(tzinfo=UTC)
+        self._platform_id_next_fetch: datetime = datetime.min.replace(tzinfo=UTC)
         self._platform_id_lock: asyncio.Lock = asyncio.Lock()
 
     def _init_keycloak_client(self) -> KeycloakClient | None:
@@ -312,12 +312,12 @@ class Container:
         Check whether the given client_id matches the platform's platformId.
         """
         async with self._platform_id_lock:
-            needs_update = self._platform_id_last_fetch < (datetime.now(tz=UTC) - timedelta(seconds=60))
-            if client_id != self._platform_id and needs_update:
+            if client_id != self._platform_id and datetime.now(tz=UTC) >= self._platform_id_next_fetch:
                 try:
-                    self._platform_id_last_fetch = datetime.now(tz=UTC)
                     self._platform_id = (await self.platform_client.get_info()).platformId
+                    self._platform_id_next_fetch = datetime.now(tz=UTC) + timedelta(seconds=60)
                 except Exception as e:
                     log.error('Failed to fetch platformId.', exc_info=e)
+                    self._platform_id_next_fetch = datetime.now(tz=UTC) + timedelta(seconds=2)
                     return False
             return client_id == self._platform_id
