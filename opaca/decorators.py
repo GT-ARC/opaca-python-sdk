@@ -9,7 +9,7 @@ from inspect import iscoroutinefunction
 
 from pydantic import BaseModel
 from typing import (Optional, Callable, get_type_hints, Dict,
-                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator, Coroutine)
+                    Tuple, Any, Union, get_origin, get_args, TYPE_CHECKING, Iterator, Awaitable)
 
 from .models import StreamDescription, Parameter
 from .recurrent_task import RecurrentTask
@@ -85,7 +85,7 @@ def stream(
 
 
 def every(
-        _func: Callable[[], Coroutine[Any, Any, None]] | None = None,
+        _func: Callable[[], Awaitable[None]] | None = None,
         *,
         interval: float | datetime.timedelta,
         run_immediately: bool = False,
