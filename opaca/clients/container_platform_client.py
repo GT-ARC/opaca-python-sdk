@@ -20,11 +20,11 @@ class ContainerPlatformClient(AsyncOpacaClient):
 
     def __init__(
             self,
-            platform_url: str | None = None,
+            url: str | None = None,
             token_provider: Callable[[], Awaitable[KeycloakToken]] | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> None:
-        super().__init__(platform_url, timeout)
+        super().__init__(url, timeout)
         self._token_provider = token_provider
         self._token_lock: asyncio.Lock = asyncio.Lock()
 
@@ -36,7 +36,7 @@ class ContainerPlatformClient(AsyncOpacaClient):
     ) -> str:
         raise RuntimeError('Not valid on this client.')
 
-    async def renew_token(self, timeout: TimeoutType = Timeout.NOT_SET) -> str:
+    async def platform_login_renew(self, timeout: TimeoutType = Timeout.NOT_SET) -> str:
         raise RuntimeError('Not valid on this client.')
 
     async def _renew_token(self, force: bool = False) -> None:

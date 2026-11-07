@@ -58,7 +58,7 @@ class Container:
         token_provider = self.keycloak_client.get_client_token \
             if self.keycloak_client else None
         return ContainerPlatformClient(
-            platform_url=self.platform_url,
+            url=self.platform_url,
             token_provider=token_provider,
             timeout=30,
         )

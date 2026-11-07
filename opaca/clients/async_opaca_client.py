@@ -18,16 +18,16 @@ class AsyncOpacaClient:
 
     def __init__(
             self,
-            platform_url: str | None = None,
+            url: str | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> None:
         """
         A client for asynchronous interaction with an OPACA Runtime Platform.
 
-        :param platform_url: The URL of the OPACA Runtime Platform.
+        :param url: The URL of the OPACA Runtime Platform.
         :param timeout: The default timeout for requests.
         """
-        self.url: str | None = platform_url
+        self.url: str | None = url
         self.access_token: KeycloakToken = KeycloakToken()
         self.refresh_token: KeycloakToken = KeycloakToken()
         self.container_tokens: dict[str, str] = {}
@@ -45,11 +45,11 @@ class AsyncOpacaClient:
         Acquire an access token from the platform. The token is also cached within
         the client itself and automatically added to all request headers.
         This also fetches a refresh token, which can be used to fetch a new access token
-        by using the renew_token() method.
+        by using the platform_login_renew() method.
 
         :return: The access token.
         """
-        self.access_token.clear()
+        self.access_token = KeycloakToken()
         body = Login(username=username, password=password).model_dump(mode='json')
         response = await self._request('POST', '/login', body=body, timeout=timeout)
         tokens = TokenPair.model_validate(response.json())
@@ -57,10 +57,10 @@ class AsyncOpacaClient:
         if tokens.refreshToken:
             self.refresh_token = KeycloakToken.from_jwt(tokens.refreshToken)
         else:
-            self.refresh_token.clear()
+            self.refresh_token = KeycloakToken()
         return tokens.accessToken
 
-    async def renew_token(self, timeout: TimeoutType = Timeout.NOT_SET) -> str:
+    async def platform_login_renew(self, timeout: TimeoutType = Timeout.NOT_SET) -> str:
         """
         Acquire a new access token from the platform by using the cached refresh token.
 
@@ -68,7 +68,7 @@ class AsyncOpacaClient:
         """
         if not self.refresh_token.token:
             raise ValueError(f'Cannot renew access token: refreshToken is missing. Call platform_login first.')
-        self.access_token.clear()
+        self.access_token = KeycloakToken()
         body = TokenRenew(refreshToken=self.refresh_token.token).model_dump(mode='json')
         response = await self._request('POST', '/login/renew', body=body, timeout=timeout)
         tokens = TokenPair.model_validate(response.json())
@@ -76,7 +76,7 @@ class AsyncOpacaClient:
         if tokens.refreshToken:
             self.refresh_token = KeycloakToken.from_jwt(tokens.refreshToken)
         else:
-            self.refresh_token.clear()
+            self.refresh_token = KeycloakToken()
         return tokens.accessToken
 
     async def container_login(

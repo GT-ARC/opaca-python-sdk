@@ -40,10 +40,6 @@ class KeycloakToken(BaseModel):
         if not self.expires_at: return True
         return (datetime.now(tz=UTC) + _EXPIRATION_OFFSET) > self.expires_at
 
-    def clear(self) -> None:
-        self.token = ''
-        self.expires_at = None
-
 
 class KeycloakClient:
 
