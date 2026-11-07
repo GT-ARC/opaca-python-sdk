@@ -2,6 +2,23 @@
 
 All changes to the opaca package will be documented in this file.
 
+## [0.0.10] - unreleased
+
+### Added
+
+- Keycloak authentication: if `KEYCLOAK_URL` is set, all container routes (except `GET /files/{file_id}`) require a valid access token issued to the container's parent platform.
+- The container's `platform_client` now authenticates against the parent platform with its own Keycloak client token, which is renewed automatically.
+- `AsyncOpacaClient` now stores the access and refresh tokens together with their expiry time (`access_token.expires_at`).
+- New sample action `broadcast_message` in the example, to test the platform client and token handling.
+
+### Changed
+
+- **Breaking:** `AsyncOpacaClient.token` was replaced by `access_token` and `refresh_token` (`KeycloakToken` objects; the raw token is in `.token`).
+- **Breaking:** `AsyncOpacaClient.renew_token()` was renamed to `platform_login_renew()`. It now uses the refresh token from `platform_login()`.
+- **Breaking:** `get_file_url()` and `find_own_url()` are now `async`, so actions using them have to be `async` too.
+- **Breaking:** The `opaca.client` module was moved to `opaca.clients`. `from opaca import AsyncOpacaClient` still works.
+- The `TOKEN` environment variable and `Container.token` were removed.
+
 ## [0.0.9] - 2026-09-07
 
 ### Added
