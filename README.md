@@ -196,7 +196,7 @@ if __name__ == "__main__":
 
 This module also provides an async client to easily interact with an OPACA runtime platform via its API. The client automatically resolves the data fetched from each endpoint into the corresponding model classes.
 
-If the platform requires authentication, `platform_login()` stores both an access token and a refresh token in the client. The access token expires after a while and is **not** renewed automatically. Use `client.access_token.is_expired()` to check whether it is expired (or about to expire), and `await client.platform_login_renew()` to get a new one using the refresh token.
+If the platform requires authentication, `client.platform_login()` stores both an access token and a refresh token in the client. The access token expires after a while and is renewed automatically in the background using the refresh token. If the refresh token is expired as well, you have to re-login manually.
 
 ### Example
 
@@ -225,7 +225,7 @@ The module provides functionality to handle both platform authentication and con
 
 ### Platform Authentication
 
-The container's parent platform may require authentication. In this case, container developers using this SDK don't need to do anything, the container then automatically rejects any API calls that don't have a valid token from the parent platform. This essentially means that all incoming requests need to go through the parent platform. The only routes still publicly available in this case are the `GET /files/{file_id}` route and the built-in FastAPI routes.
+The container's parent platform may require authentication. In this case, container developers using this SDK don't need to do anything: the container will automatically reject any API calls that don't have a valid token from the parent platform. This essentially means that all incoming requests need to go through the parent platform, which implements the appropriate authentication mechanisms. The only routes still publicly available in this case are the `GET /files/{file_id}` route and the built-in FastAPI routes.
 
 Agents can also contact their parent platform by using `self.platform_client`. When using this, authentication is also handled automatically. However, be aware that `platform_login` and `platform_login_renew` are not available on this client, as it is meant exclusively to contact the container's parent platform.
 
