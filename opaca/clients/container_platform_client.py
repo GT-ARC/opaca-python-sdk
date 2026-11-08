@@ -43,4 +43,5 @@ class ContainerPlatformClient(AsyncOpacaClient):
             try:
                 self.access_token = await self._token_provider()
             except Exception as e:
-                log.error(f'Failed to renew access token', exc_info=e)
+                log.error('Failed to renew access token.')
+                raise e

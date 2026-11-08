@@ -52,8 +52,9 @@ class AsyncOpacaClient:
         :return: The access token.
         """
         self.access_token = KeycloakToken()
+        self.refresh_token = KeycloakToken()
         body = Login(username=username, password=password).model_dump(mode='json')
-        response = await self._request_unsafe('POST', '/login', body=body, timeout=timeout)
+        response = await self._request('POST', '/login', body=body, timeout=timeout)
         tokens = TokenPair.model_validate(response.json())
         self.access_token = KeycloakToken.from_jwt(tokens.accessToken)
         self.refresh_token = KeycloakToken.from_jwt(tokens.refreshToken) \
@@ -70,7 +71,7 @@ class AsyncOpacaClient:
             raise ValueError(f'Cannot renew access token: refreshToken is missing. Call platform_login first.')
         self.access_token = KeycloakToken()
         body = TokenRenew(refreshToken=self.refresh_token.token).model_dump(mode='json')
-        response = await self._request_unsafe('POST', '/login/renew', body=body, timeout=timeout)
+        response = await self._request('POST', '/login/renew', body=body, timeout=timeout)
         tokens = TokenPair.model_validate(response.json())
         self.access_token = KeycloakToken.from_jwt(tokens.accessToken)
         self.refresh_token = KeycloakToken.from_jwt(tokens.refreshToken) \
@@ -88,14 +89,14 @@ class AsyncOpacaClient:
         Acquires a login token from a container. The token is also cached internally.
         """
         body = Login(username=username, password=password).model_dump(mode='json')
-        response = await self._request('POST', f'/containers/login/{container_id}', body=body, timeout=timeout)
+        response = await self._request_with_retry('POST', f'/containers/login/{container_id}', body=body, timeout=timeout)
         token = response.text
         self.container_tokens[container_id] = token
         return token
 
     async def container_logout(self, container_id: str) -> bool:
         if container_id not in self.container_tokens: return False
-        response = await self._request('POST', f'/containers/logout/{container_id}')
+        response = await self._request_with_retry('POST', f'/containers/logout/{container_id}')
         del self.container_tokens[container_id]
         return response.json()
 
@@ -110,7 +111,7 @@ class AsyncOpacaClient:
         Get a list of all containers. If includeConnected is True, also include containers from connected platforms.
         """
         params = _build_query_params(includeConnected=include_connected)
-        response = await self._request('GET', '/containers', params=params, timeout=timeout)
+        response = await self._request_with_retry('GET', '/containers', params=params, timeout=timeout)
         return [ContainerDescription.model_validate(container)
                 for container in response.json()]
 
@@ -120,7 +121,7 @@ class AsyncOpacaClient:
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> str:
         body = post_container.model_dump(mode='json')
-        response = await self._request('POST', '/containers', body=body, timeout=timeout)
+        response = await self._request_with_retry('POST', '/containers', body=body, timeout=timeout)
         return response.text
 
     async def put_container(
@@ -129,7 +130,7 @@ class AsyncOpacaClient:
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> str:
         body = post_container.model_dump(mode='json')
-        response = await self._request('PUT', '/containers', body=body, timeout=timeout)
+        response = await self._request_with_retry('PUT', '/containers', body=body, timeout=timeout)
         return response.text
 
     async def delete_container(
@@ -137,7 +138,7 @@ class AsyncOpacaClient:
             container_id: str,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
-        response = await self._request('DELETE', f'/containers/{container_id}', timeout=timeout)
+        response = await self._request_with_retry('DELETE', f'/containers/{container_id}', timeout=timeout)
         return response.json()
 
     async def post_container_notify(
@@ -145,7 +146,7 @@ class AsyncOpacaClient:
             container_id: str,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
-        response = await self._request('POST', f'/containers/notify', body=container_id, timeout=timeout)
+        response = await self._request_with_retry('POST', f'/containers/notify', body=container_id, timeout=timeout)
         return response.json()
 
     ### AGENTS ###
@@ -159,7 +160,7 @@ class AsyncOpacaClient:
         Get a list of all agents. If includeConnected is True, also include agents from connected platforms.
         """
         params = _build_query_params(includeConnected=include_connected)
-        response = await self._request('GET', '/agents', params=params, timeout=timeout)
+        response = await self._request_with_retry('GET', '/agents', params=params, timeout=timeout)
         return [AgentDescription.model_validate(agent) for agent in response.json()]
 
     async def get_agent(
@@ -167,7 +168,7 @@ class AsyncOpacaClient:
             agent_id: str,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> AgentDescription:
-        response = await self._request('GET', f'/agents/{agent_id}', timeout=timeout)
+        response = await self._request_with_retry('GET', f'/agents/{agent_id}', timeout=timeout)
         return AgentDescription.model_validate(response.json())
 
     async def invoke(
@@ -183,7 +184,7 @@ class AsyncOpacaClient:
             args = {}
         path = f'/invoke/{action}' + (f'/{agent_id}' if agent_id else '')
         params = _build_query_params(containerId=container_id, forward=forward)
-        response = await self._request('POST', path, body=args, params=params, timeout=timeout)
+        response = await self._request_with_retry('POST', path, body=args, params=params, timeout=timeout)
         return response.json()
 
     async def get_stream(
@@ -229,7 +230,7 @@ class AsyncOpacaClient:
             self,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> list[str]:
-        response = await self._request('GET', '/connections', timeout=timeout)
+        response = await self._request_with_retry('GET', '/connections', timeout=timeout)
         return response.json()
 
     async def post_connection(
@@ -239,7 +240,7 @@ class AsyncOpacaClient:
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
         body = {'url': connection, 'connectBack': connect_back, 'token': None}
-        response = await self._request('POST', '/connections', body=body, timeout=timeout)
+        response = await self._request_with_retry('POST', '/connections', body=body, timeout=timeout)
         return response.json()
 
     async def delete_connection(
@@ -249,7 +250,7 @@ class AsyncOpacaClient:
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
         body = ConnectionRequest(url=connection, connectBack=connect_back).model_dump(mode='json')
-        response = await self._request('DELETE', f'/connections', body=body, timeout=timeout)
+        response = await self._request_with_retry('DELETE', f'/connections', body=body, timeout=timeout)
         return response.json()
 
     async def post_connection_notify(
@@ -257,7 +258,7 @@ class AsyncOpacaClient:
             connection: str,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> bool:
-        response = await self._request('POST', '/connections/notify', body=connection, timeout=timeout)
+        response = await self._request_with_retry('POST', '/connections/notify', body=connection, timeout=timeout)
         return response.json()
 
     ### MESSAGES ###
@@ -272,7 +273,7 @@ class AsyncOpacaClient:
     ) -> None:
         body = message.model_dump(mode='json')
         params = _build_query_params(containerId=container_id, forward=forward)
-        await self._request('POST', f'/send/{agent_id}', body=body, params=params, timeout=timeout)
+        await self._request_with_retry('POST', f'/send/{agent_id}', body=body, params=params, timeout=timeout)
 
     async def broadcast(
             self,
@@ -284,7 +285,7 @@ class AsyncOpacaClient:
     ) -> None:
         body = message.model_dump(mode='json')
         params = _build_query_params(containerId=container_id, forward=forward)
-        await self._request('POST', f'/broadcast/{channel}', body=body, params=params, timeout=timeout)
+        await self._request_with_retry('POST', f'/broadcast/{channel}', body=body, params=params, timeout=timeout)
 
     ### INFO ###
 
@@ -292,24 +293,46 @@ class AsyncOpacaClient:
             self,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> PlatformInfo:
-        response = await self._request('GET', '/info', timeout=timeout)
+        response = await self._request_with_retry('GET', '/info', timeout=timeout)
         return PlatformInfo.model_validate(response.json())
 
     async def get_config(
             self,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> dict[str, Any]:
-        response = await self._request('GET', '/config', timeout=timeout)
+        response = await self._request_with_retry('GET', '/config', timeout=timeout)
         return response.json()
 
     async def get_history(
             self,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> list[Event]:
-        response = await self._request('GET', '/history', timeout=timeout)
+        response = await self._request_with_retry('GET', '/history', timeout=timeout)
         return [Event.model_validate(event) for event in response.json()]
 
     ### PRIVATE HELPER METHODS ###
+
+    async def _request_with_retry(
+            self,
+            method: str,
+            path: str,
+            body: Any | None = None,
+            params: QueryParams | None = None,
+            timeout: TimeoutType = Timeout.NOT_SET
+    ) -> httpx.Response:
+        """
+        Send a generic request to the platform.
+
+        This is a wrapper around _request with an additional update of the access token
+        and subsequent retry if the request failed with status code 401.
+        """
+        await self._renew_token()
+        try:
+            return await self._request(method, path, body, params, timeout)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code != 401: raise e
+            await self._renew_token(force=True)
+        return await self._request(method, path, body, params, timeout)
 
     async def _request(
             self,
@@ -321,38 +344,6 @@ class AsyncOpacaClient:
     ) -> httpx.Response:
         """
         Send a generic request to the platform.
-
-        Check whether the access token is expired/close to expiring before sending the request,
-        and also retry once in case of a 401.
-        """
-        if not self.url:
-            raise UrlNotSetException(f'AsyncOpacaClient: Platform URL not set')
-        timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
-        url = f'{self.url}{path}'
-        if self.access_token.is_expired():
-            await self._renew_token()
-        try:
-            return await _httpx_request(method, url, body, params, self._headers(), timeout)
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401: await self._renew_token(force=True)
-            else: raise e
-        return await _httpx_request(method, url, body, params, self._headers(), timeout)
-
-    async def _request_unsafe(
-            self,
-            method: str,
-            path: str,
-            body: Any | None = None,
-            params: QueryParams | None = None,
-            timeout: TimeoutType = Timeout.NOT_SET
-    ) -> httpx.Response:
-        """
-        Send a generic request to the platform.
-
-        This variant does not check whether the access token is expired beforehand,
-        and also does not attempt a retry after a failed request.
-        This is used by the methods that explicitly do not want/need to renew the token,
-        i.e. the platform-login methods.
         """
         if not self.url:
             raise UrlNotSetException(f'AsyncOpacaClient: Platform URL not set')
@@ -378,8 +369,7 @@ class AsyncOpacaClient:
             raise UrlNotSetException(f'AsyncOpacaClient: Platform URL not set')
         timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
         url = f'{self.url}{path}'
-        if self.access_token.is_expired():
-            await self._renew_token()
+        await self._renew_token()
         async for chunk in _httpx_stream(method, url, content, params, self._headers(), timeout):
             yield chunk
 
@@ -390,8 +380,8 @@ class AsyncOpacaClient:
         return headers
 
     async def _renew_token(self, force: bool = False) -> None:
-        if not self.refresh_token: return
         async with self._token_lock:
+            if not self.refresh_token: return
             if force or self.access_token.is_expired():
                 await self.platform_login_renew(timeout=30)
 

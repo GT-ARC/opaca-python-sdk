@@ -196,7 +196,7 @@ if __name__ == "__main__":
 
 This module also provides an async client to easily interact with an OPACA runtime platform via its API. The client automatically resolves the data fetched from each endpoint into the corresponding model classes.
 
-If the platform requires authentication, `client.platform_login()` stores both an access token and a refresh token in the client. The access token expires after a while and is renewed automatically in the background using the refresh token. If the refresh token is expired as well, you have to re-login manually.
+If the platform requires authentication, `client.platform_login()` stores both an access token and a refresh token in the client. The access token expires after a while and is renewed automatically in the background using the refresh token. If the refresh token is expired as well, you have to re-login manually. You can still manually refresh the access token by calling `client.platform_login_renew()`.
 
 ### Example
 
@@ -210,12 +210,9 @@ client = AsyncOpacaClient('http://localhost:8000')
 async def get_info() -> PlatformInfo:
    # Log in to the RP, if necessary. Both the access and refresh tokens are cached directly in the client.
    await client.platform_login('username', 'password')
-   
-   # Renew the access token when it's about to expire.
-   if client.access_token.is_expired():
-       await client.platform_login_renew()
 
-   # Fetch the RP's info.
+   # Fetch the RP's info. If the access token is already
+   # expired, no extra action is needed.
    return await client.get_info()
 ```
 

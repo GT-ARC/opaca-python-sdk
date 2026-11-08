@@ -310,6 +310,9 @@ class Container:
     async def check_client_id(self, client_id: str) -> bool:
         """
         Check whether the given client_id matches the platform's platformId.
+
+        The platform ID is re-fetched regularly as it can change if the platform is restarted
+        with session_policy=reconnect.
         """
         async with self._platform_id_lock:
             if client_id != self._platform_id and datetime.now(tz=UTC) >= self._platform_id_next_fetch:
