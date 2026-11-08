@@ -25,6 +25,9 @@ class KeycloakToken(BaseModel):
     token: str = ''
     expires_at: datetime | None = None
 
+    def __bool__(self) -> bool:
+        return bool(self.token)
+
     @classmethod
     def from_jwt(cls, token: str) -> 'KeycloakToken':
         try:

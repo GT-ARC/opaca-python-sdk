@@ -1,6 +1,7 @@
+import asyncio
 import httpx
 import enum
-from typing import Any, AsyncIterator, Callable, Awaitable
+from typing import Any, AsyncIterator
 from httpx import QueryParams
 
 from ..keycloak_utils import KeycloakToken
@@ -32,6 +33,7 @@ class AsyncOpacaClient:
         self.refresh_token: KeycloakToken = KeycloakToken()
         self.container_tokens: dict[str, str] = {}
         self.timeout: TimeoutType = None if timeout is Timeout.NOT_SET else timeout
+        self._token_lock: asyncio.Lock = asyncio.Lock()
 
     ### AUTHENTICATION ###
 
@@ -51,13 +53,11 @@ class AsyncOpacaClient:
         """
         self.access_token = KeycloakToken()
         body = Login(username=username, password=password).model_dump(mode='json')
-        response = await self._request('POST', '/login', body=body, timeout=timeout)
+        response = await self._request_unsafe('POST', '/login', body=body, timeout=timeout)
         tokens = TokenPair.model_validate(response.json())
         self.access_token = KeycloakToken.from_jwt(tokens.accessToken)
-        if tokens.refreshToken:
-            self.refresh_token = KeycloakToken.from_jwt(tokens.refreshToken)
-        else:
-            self.refresh_token = KeycloakToken()
+        self.refresh_token = KeycloakToken.from_jwt(tokens.refreshToken) \
+            if tokens.refreshToken else KeycloakToken()
         return tokens.accessToken
 
     async def platform_login_renew(self, timeout: TimeoutType = Timeout.NOT_SET) -> str:
@@ -66,17 +66,15 @@ class AsyncOpacaClient:
 
         :return: The new access token.
         """
-        if not self.refresh_token.token:
+        if not self.refresh_token:
             raise ValueError(f'Cannot renew access token: refreshToken is missing. Call platform_login first.')
         self.access_token = KeycloakToken()
         body = TokenRenew(refreshToken=self.refresh_token.token).model_dump(mode='json')
-        response = await self._request('POST', '/login/renew', body=body, timeout=timeout)
+        response = await self._request_unsafe('POST', '/login/renew', body=body, timeout=timeout)
         tokens = TokenPair.model_validate(response.json())
         self.access_token = KeycloakToken.from_jwt(tokens.accessToken)
-        if tokens.refreshToken:
-            self.refresh_token = KeycloakToken.from_jwt(tokens.refreshToken)
-        else:
-            self.refresh_token = KeycloakToken()
+        self.refresh_token = KeycloakToken.from_jwt(tokens.refreshToken) \
+            if tokens.refreshToken else KeycloakToken()
         return tokens.accessToken
 
     async def container_login(
@@ -321,13 +319,46 @@ class AsyncOpacaClient:
             params: QueryParams | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> httpx.Response:
+        """
+        Send a generic request to the platform.
+
+        Check whether the access token is expired/close to expiring before sending the request,
+        and also retry once in case of a 401.
+        """
         if not self.url:
             raise UrlNotSetException(f'AsyncOpacaClient: Platform URL not set')
         timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
-        async with httpx.AsyncClient() as client:
-            response = await client.request(method, f'{self.url}{path}', json=body, params=params, headers=self._headers(), timeout=timeout)
-            response.raise_for_status()
-            return response
+        url = f'{self.url}{path}'
+        if self.access_token.is_expired():
+            await self._renew_token()
+        try:
+            return await _httpx_request(method, url, body, params, self._headers(), timeout)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401: await self._renew_token(force=True)
+            else: raise e
+        return await _httpx_request(method, url, body, params, self._headers(), timeout)
+
+    async def _request_unsafe(
+            self,
+            method: str,
+            path: str,
+            body: Any | None = None,
+            params: QueryParams | None = None,
+            timeout: TimeoutType = Timeout.NOT_SET
+    ) -> httpx.Response:
+        """
+        Send a generic request to the platform.
+
+        This variant does not check whether the access token is expired beforehand,
+        and also does not attempt a retry after a failed request.
+        This is used by the methods that explicitly do not want/need to renew the token,
+        i.e. the platform-login methods.
+        """
+        if not self.url:
+            raise UrlNotSetException(f'AsyncOpacaClient: Platform URL not set')
+        timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
+        url = f'{self.url}{path}'
+        return await _httpx_request(method, url, body, params, self._headers(), timeout)
 
     async def _stream(
             self,
@@ -337,20 +368,61 @@ class AsyncOpacaClient:
             params: QueryParams | None = None,
             timeout: TimeoutType = Timeout.NOT_SET
     ) -> AsyncIterator[bytes]:
+        """
+        Send a generic streaming request to the platform.
+
+        Check whether the access token is expired/close to expiring before sending the request.
+        No retry in case of 401, as the body-iterator might already be exhausted.
+        """
         if not self.url:
             raise UrlNotSetException(f'AsyncOpacaClient: Platform URL not set')
         timeout = self.timeout if timeout is Timeout.NOT_SET else timeout
-        async with httpx.AsyncClient() as client:
-            async with client.stream(method, f'{self.url}{path}', content=content, params=params, headers=self._headers(), timeout=timeout) as response:
-                response.raise_for_status()
-                async for chunk in response.aiter_bytes():
-                    yield chunk
+        url = f'{self.url}{path}'
+        if self.access_token.is_expired():
+            await self._renew_token()
+        async for chunk in _httpx_stream(method, url, content, params, self._headers(), timeout):
+            yield chunk
 
     def _headers(self) -> dict[str, str] | None:
         headers = {'Content-Type': 'application/json; charset=UTF-8'}
-        if self.access_token.token:
+        if self.access_token:
             headers['Authorization'] = f'Bearer {self.access_token.token}'
         return headers
+
+    async def _renew_token(self, force: bool = False) -> None:
+        if not self.refresh_token: return
+        async with self._token_lock:
+            if force or self.access_token.is_expired():
+                await self.platform_login_renew(timeout=30)
+
+
+async def _httpx_request(
+        method: str,
+        url: str,
+        body: Any | None = None,
+        params: QueryParams | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: TimeoutType = None,
+) -> httpx.Response:
+    async with httpx.AsyncClient() as client:
+        response = await client.request(method, url, json=body, params=params, headers=headers, timeout=timeout)
+        response.raise_for_status()
+        return response
+
+
+async def _httpx_stream(
+        method: str,
+        url: str,
+        content: StreamContent | None = None,
+        params: QueryParams | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: TimeoutType = None,
+) -> AsyncIterator[bytes]:
+    async with httpx.AsyncClient() as client:
+        async with client.stream(method, url, content=content, params=params, headers=headers, timeout=timeout) as response:
+            response.raise_for_status()
+            async for chunk in response.aiter_bytes():
+                yield chunk
 
 
 def _build_query_params(**kwargs) -> QueryParams | None:
