@@ -98,8 +98,8 @@ def _create_protected_routes(container: Container) -> APIRouter:
         """
         Invoke the specified action on any agent that knows the action.
         """
-        return await container.invoke_action(action, parameters,
-                                             ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+        token = ContainerLoginToken.strip('"') if ContainerLoginToken else None
+        return await container.invoke_action(action, parameters, token)
 
     @router.post('/invoke/{action}/{agentId}', response_model=Any)
     async def invoke_agent_action(action: str, agentId: str, parameters: Dict[str, Any],
@@ -107,8 +107,8 @@ def _create_protected_routes(container: Container) -> APIRouter:
         """
         Invoke an action on a specific agent.
         """
-        return await container.invoke_agent_action(action, agentId, parameters,
-                                                   ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+        token = ContainerLoginToken.strip('"') if ContainerLoginToken else None
+        return await container.invoke_agent_action(action, agentId, parameters, token)
 
     @router.get('/stream/{stream}', response_class=StreamingResponse)
     async def get_stream(stream: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse:
@@ -119,13 +119,13 @@ def _create_protected_routes(container: Container) -> APIRouter:
         return _make_stream_response(container, stream, StreamDescription.Mode.GET, login_token=token)
 
     @router.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
-    async def get_agent_stream(stream: str, agent_id: str,
+    async def get_agent_stream(stream: str, agentId: str,
                                ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse:
         """
         GET a stream from the specified agent.
         """
         token = ContainerLoginToken.strip('"') if ContainerLoginToken else None
-        return _make_stream_response(container, stream, StreamDescription.Mode.GET, agent_id, token)
+        return _make_stream_response(container, stream, StreamDescription.Mode.GET, agentId, token)
 
     @router.post('/login')
     async def handle_login(login: Login) -> str:
