@@ -67,7 +67,8 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Invoke the specified action on any agent that knows the action.
         """
-        return await container.invoke_action(action, parameters, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+        token = ContainerLoginToken.strip('"') if ContainerLoginToken else None
+        return await container.invoke_action(action, parameters, token)
 
 
     @app.post('/invoke/{action}/{agentId}', response_model=Any)
@@ -75,7 +76,8 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         Invoke an action on a specific agent.
         """
-        return await container.invoke_agent_action(action, agentId, parameters, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+        token = ContainerLoginToken.strip('"') if ContainerLoginToken else None
+        return await container.invoke_agent_action(action, agentId, parameters, token)
 
 
     @app.get('/stream/{stream}', response_class=StreamingResponse)
@@ -83,15 +85,17 @@ def create_routes(title: str, container: Container) -> FastAPI:
         """
         GET a stream from any agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET, login_token=ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+        token = ContainerLoginToken.strip('"') if ContainerLoginToken else None
+        return make_stream_response(stream, StreamDescription.Mode.GET, login_token=token)
 
 
     @app.get('/stream/{stream}/{agentId}', response_class=StreamingResponse)
-    async def get_agent_stream(stream: str, agent_id: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse:
+    async def get_agent_stream(stream: str, agentId: str, ContainerLoginToken: Annotated[str | None, Header()] = None) -> StreamingResponse:
         """
         GET a stream from the specified agent.
         """
-        return make_stream_response(stream, StreamDescription.Mode.GET, agent_id, ContainerLoginToken.strip('"') if ContainerLoginToken else None)
+        token = ContainerLoginToken.strip('"') if ContainerLoginToken else None
+        return make_stream_response(stream, StreamDescription.Mode.GET, agentId, token)
 
     @app.post('/login')
     async def handle_login(login: Login) -> str:
