@@ -2,7 +2,7 @@
 
 All changes to the opaca package will be documented in this file.
 
-## [0.0.10] - unreleased
+## [0.0.10] - 2026-11-12
 
 ### Added
 
