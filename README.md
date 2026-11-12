@@ -196,6 +196,8 @@ if __name__ == "__main__":
 
 This module also provides an async client to easily interact with an OPACA runtime platform via its API. The client automatically resolves the data fetched from each endpoint into the corresponding model classes.
 
+If the platform requires authentication, `client.platform_login()` stores both an access token and a refresh token in the client. The access token expires after a while and is renewed automatically in the background using the refresh token. If the refresh token is expired as well, you have to re-login manually. You can still manually refresh the access token by calling `client.platform_login_renew()`.
+
 ### Example
 
 ```python
@@ -206,18 +208,36 @@ from opaca.models import PlatformInfo
 client = AsyncOpacaClient('http://localhost:8000')
 
 async def get_info() -> PlatformInfo:
-   # Log in to the RP, if necessary. The token is stored in the client object.
+   # Log in to the RP, if necessary. Both the access and refresh tokens are cached directly in the client.
    await client.platform_login('username', 'password')
-   
-   # Fetch the RP's info.
+
+   # Fetch the RP's info. If the access token is already
+   # expired, no extra action is needed.
    return await client.get_info()
 ```
 
 ## Authentication
 
-It might be useful for your use-case to implement authentication for your agent, so it can determine the identity of the user who is calling the agent. This might be applicable when impelementing agents, connecting to external APIs, requiring user credentials. The OPACA framework defines a so-called "Container Login", in which an identifiable user token (UUID) is sent with each request. This token can then be used in your agent logic and to restrict specific actions to users with valid credentials, or make external API calls with the provided credentials.
+The module provides functionality to handle both platform authentication and container login.
 
-### Container Login Routes
+### Platform Authentication
+
+The container's parent platform may require authentication. In this case, container developers using this SDK don't need to do anything: the container will automatically reject any API calls that don't have a valid token from the parent platform. This essentially means that all incoming requests need to go through the parent platform, which implements the appropriate authentication mechanisms. The only routes still publicly available in this case are the `GET /files/{file_id}` route and the built-in FastAPI routes.
+
+Agents can also contact their parent platform by using `self.platform_client`. When using this, authentication is also handled automatically. However, be aware that `platform_login` and `platform_login_renew` are not available on this client, as it is meant exclusively to contact the container's parent platform.
+
+#### Example
+
+```python
+@action
+async def get_agent_ids(self) -> list[str]:
+    agents = await self.platform_client.get_agents()
+    return [a.agentId for a in agents]
+```
+
+### Container Login
+
+It might be useful for your use-case to implement authentication for your agent, so it can determine the identity of the user who is calling the agent. This might be applicable when implementing agents, connecting to external APIs, requiring user credentials. The OPACA framework defines a so-called "Container Login", in which an identifiable user token (UUID) is sent with each request. This token can then be used in your agent logic and to restrict specific actions to users with valid credentials, or make external API calls with the provided credentials.
 
 To differentiate between different users, you first need to implement the following two functions in your agent:
 
@@ -277,14 +297,14 @@ async def login_test_stream(self, login_token: str):
 
 If you want to make a file in the container easily available for download, for example for SAGE to be able to embed an image into its output, you can do so using the built-in `GET /files/{file_id}` route.
 
-To make a file available via this route, you can use the `expose_file(path_to_file)` method available on any agent.
+To make a file available via this route, you can use the `expose_file(path_to_file)` method available on any agent. You can then get the URL where the file is publicly available by using the `get_file_url(file_id)` method. The latter is `async`, so you have to make the action `async` as well and `await` the result.
 
 Example:
 ```python
 class SampleAgent(AbstractAgent):
 
     @action
-    def plot_something(self, data: list[tuple[int, int]]) -> str:
+    async def plot_something(self, data: list[tuple[int, int]]) -> str:
         """
         This mock function creates a plot given the data, saves it to disk, 
         exposes the saved plot image and returns the URL to that image.
@@ -296,7 +316,7 @@ class SampleAgent(AbstractAgent):
         file_id = self.expose_file('plots/plot.png')
 
         # Use this method to get the full URL where the file is available.
-        return self.get_file_url(file_id)
+        return await self.get_file_url(file_id)
 ```
 
 ## Additional Information

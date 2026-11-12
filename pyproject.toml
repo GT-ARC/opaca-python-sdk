@@ -21,6 +21,8 @@ dependencies = [
     "uvicorn[standard]>=0.37.0",
     "starlette>=0.48.0",
     "httpx>=0.28.1",
+    "python-keycloak>=7.1.1",
+    "jwcrypto>=1.6.1",
 ]
 
 [project.urls]
@@ -29,5 +31,5 @@ Changelog = "https://github.com/GT-ARC/opaca-python-sdk/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["opaca"]
+include = ["opaca", "opaca.clients"]
 namespaces = false

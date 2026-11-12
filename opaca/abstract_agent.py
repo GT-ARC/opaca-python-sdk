@@ -6,7 +6,7 @@ from pydantic import ValidationError
 import uuid
 import logging
 
-from .client import AsyncOpacaClient
+from .clients import AsyncOpacaClient
 from .models import AgentDescription, ActionDescription, Message, StreamDescription, Parameter, LoginMsg, StreamContent
 from .recurrent_task import RecurrentTask
 from .utils import http_error
@@ -264,7 +264,7 @@ class AbstractAgent:
         Expose a file to be publicly available
         via the '/files/{file_id}' route.
 
-        Call `self.get_file_url(file_id)` to get the full URL where
+        Call `await self.get_file_url(file_id)` to get the full URL where
         the file is available.
 
         :param path: The path to the file.
@@ -272,14 +272,14 @@ class AbstractAgent:
         """
         return self.container.expose_file(path)
 
-    def get_file_url(self, file_id: str) -> str:
+    async def get_file_url(self, file_id: str) -> str:
         """
         Get the full URL for an exposed file.
 
         This is only usable AFTER the container is online and the
         platform was able to communicate with it.
         """
-        return self.container.get_file_url(file_id)
+        return await self.container.get_file_url(file_id)
 
     def cancel_recurrent_task(self, task_id: str) -> None:
         """

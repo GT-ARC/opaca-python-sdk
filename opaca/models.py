@@ -114,6 +114,15 @@ class LoginMsg(BaseModel):
     login: Login
 
 
+class TokenPair(BaseModel):
+    accessToken: str
+    refreshToken: str | None = None
+
+
+class TokenRenew(BaseModel):
+    refreshToken: str
+
+
 class PlatformInfo(BaseModel):
     platformId: str
     baseUrl: str

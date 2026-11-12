@@ -1,16 +1,18 @@
+import asyncio
 import os
 import uuid
 import logging
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import json
-import httpx
 from pydantic import BaseModel
 from starlette.responses import FileResponse
 
-from .client import AsyncOpacaClient
+from .keycloak_utils import KeycloakClient
+from .clients import AsyncOpacaClient
+from .clients.container_platform_client import ContainerPlatformClient
 from .abstract_agent import AbstractAgent
 from .models import ContainerDescription, AgentDescription, Message, ImageDescription, StreamDescription, LoginMsg, \
     Login, StreamContent
@@ -26,9 +28,9 @@ class Container:
         self.container_id: str = os.getenv('CONTAINER_ID', '')
         self.platform_url: str = os.getenv('PLATFORM_URL', '')
         self.owner: str = os.getenv('OWNER', '')
-        self.token: str = os.getenv('TOKEN', '')
         self.image: ImageDescription = Container.load_image(path_to_image_file)
-        self.platform_client: AsyncOpacaClient = AsyncOpacaClient(self.platform_url)
+        self.keycloak_client: KeycloakClient | None = self._init_keycloak_client()
+        self.platform_client: AsyncOpacaClient = self._init_platform_client()
 
         self._own_url: Optional[str] = None
         self._agents: Dict[str, AbstractAgent] = {}
@@ -36,6 +38,30 @@ class Container:
         self._broadcast_channels: Dict[str, List[AbstractAgent]] = {}
         self._base_models: Dict[str, Any] = {}
         self._exposed_files: Dict[str, Path] = {}
+        self._platform_id: str | None = None
+        self._platform_id_next_fetch: datetime = datetime.min.replace(tzinfo=UTC)
+        self._platform_id_lock: asyncio.Lock = asyncio.Lock()
+
+    def _init_keycloak_client(self) -> KeycloakClient | None:
+        keycloak_url = os.getenv('KEYCLOAK_URL', '')
+        client_secret = os.getenv('CLIENT_SECRET', '')
+        if not keycloak_url: return None
+        if not client_secret:
+            raise ValueError('Keycloak CLIENT_SECRET is missing.')
+        return KeycloakClient(
+            keycloak_url=keycloak_url,
+            client_secret=client_secret,
+            client_id=self.container_id,
+        )
+
+    def _init_platform_client(self) -> AsyncOpacaClient:
+        token_provider = self.keycloak_client.get_client_token \
+            if self.keycloak_client else None
+        return ContainerPlatformClient(
+            url=self.platform_url,
+            token_provider=token_provider,
+            timeout=30,
+        )
 
     @staticmethod
     def load_image(json_file: str) -> ImageDescription:
@@ -208,26 +234,33 @@ class Container:
                  for param in self.image.parameters
                  if include_confidential or not param.confidential }
 
-    def find_own_url(self):
+    async def find_own_url(self) -> str:
         """
         Find the container's own base url, including the API port.
-
-        Should replace this with SyncOpacaClient call once that exists.
         """
+        # special case for test containers without parent platform.
         if not self.platform_url:
             return f'http://localhost:{self.image.apiPort}'
 
-        if self._own_url is None:
-            try:
-                containers = httpx.get(f"{self.platform_url}/containers").json()
-                connectivity = next(c["connectivity"] for c in containers if c["containerId"] == self.container_id)
-                self._own_url = f'{connectivity["publicUrl"]}:{connectivity["apiPortMapping"]}'
-            except httpx.RequestError as e:
-                log.error('Failed to request own URL from the OPACA runtime platform. '
-                          'Make sure that the container is known by the platform.')
-                raise e
+        if self._own_url:
+            return self._own_url
+        try:
+            containers = await self.platform_client.get_containers()
+        except Exception as e:
+            log.error('Failed to request own URL from the OPACA runtime platform.')
+            raise e
+        connectivity = next(
+            (c.connectivity for c in containers
+            if c.containerId == self.container_id and c.connectivity is not None),
+            None
+        )
+        if not connectivity:
+            raise ValueError('Container is not in the platform\'s container list. '
+                             'Make sure that the container is known by the platform.')
 
-        return self._own_url
+        own_url = f'{connectivity.publicUrl}:{connectivity.apiPortMapping}'
+        self._own_url = own_url
+        return own_url
 
     def expose_file(self, path: str | Path) -> str:
         """Helper function to publicly expose a file
@@ -239,9 +272,9 @@ class Container:
         self._exposed_files[file_id] = file_path
         return file_id
 
-    def get_file_url(self, file_id: str) -> str:
+    async def get_file_url(self, file_id: str) -> str:
         """Helper function to get an exposed file's full URL."""
-        own_url = self.find_own_url()
+        own_url = await self.find_own_url()
         if not own_url:
             raise http_error(400,f'Could not find own URL.')
         return f'{own_url}/files/{file_id}'
@@ -273,3 +306,21 @@ class Container:
         container's info.
         """
         self._base_models[model.__name__] = model
+
+    async def check_client_id(self, client_id: str) -> bool:
+        """
+        Check whether the given client_id matches the platform's platformId.
+
+        The platform ID is re-fetched regularly as it can change if the platform is restarted
+        with session_policy=reconnect.
+        """
+        async with self._platform_id_lock:
+            if client_id != self._platform_id and datetime.now(tz=UTC) >= self._platform_id_next_fetch:
+                try:
+                    self._platform_id = (await self.platform_client.get_info()).platformId
+                    self._platform_id_next_fetch = datetime.now(tz=UTC) + timedelta(seconds=60)
+                except Exception as e:
+                    log.error('Failed to fetch platformId.', exc_info=e)
+                    self._platform_id_next_fetch = datetime.now(tz=UTC) + timedelta(seconds=2)
+                    return False
+            return client_id == self._platform_id
