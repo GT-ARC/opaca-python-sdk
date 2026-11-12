@@ -4,7 +4,7 @@ This module provides an implementation of the OPACA API in Python, using FastAPI
 
 ## Installation
 
-You can install the package by running `pip install opaca` and then `import opaca` into your project files.
+You can install the package by running `pip install opaca` and then `import opaca` into your project files. Python 3.12 or newer is required.
 
 ## Developing new Agents
 

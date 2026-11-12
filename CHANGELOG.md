@@ -6,8 +6,11 @@ All changes to the opaca package will be documented in this file.
 
 ### Added
 
+- New `@every` decorator for recurrent agent behaviour that is executed on a fixed interval.
+- Agents can contact their parent platform via the built-in `self.platform_client`.
+- Custom `BaseModel` types in `Optional` action parameters are now also parsed automatically.
 - Keycloak authentication: if `KEYCLOAK_URL` is set, all container routes (except `GET /files/{file_id}`) require a valid access token issued to the container's parent platform.
-- The container's `platform_client` now authenticates against the parent platform with its own Keycloak client token, which is renewed automatically.
+- The `platform_client` authenticates against the parent platform with its own Keycloak client token, which is renewed automatically.
 - `AsyncOpacaClient` now renews its access token automatically after `platform_login()`, using the refresh token: before a request if the token is about to expire, and on a `401`. Without a login, requests are sent without a token, so platforms without auth work as before.
 - Tokens are now stored together with their expiry time (`access_token.expires_at`).
 - New sample action `broadcast_message` in the example, to test the platform client and token handling.
@@ -19,7 +22,13 @@ All changes to the opaca package will be documented in this file.
 - **Breaking:** `platform_login()` and `platform_login_renew()` now expect the platform's `/login` and `/login/renew` routes to return an access and refresh token pair, so they need a platform version that does.
 - **Breaking:** `get_file_url()` and `find_own_url()` are now `async`, so actions using them have to be `async` too.
 - **Breaking:** The `opaca.client` module was moved to `opaca.clients`. `from opaca import AsyncOpacaClient` still works.
+- **Breaking:** Python 3.12 or newer is now required.
+- **Breaking:** `AbstractAgent.make_description()` and `Container.get_description()` were renamed to `make_model()`. Several internal helpers were made private.
 - The `TOKEN` environment variable and `Container.token` were removed.
+
+### Fixed
+
+- Fixed `GET /stream/{stream}/{agentId}` not resolving the `agentId` path parameter.
 
 ## [0.0.9] - 2026-09-07
 
